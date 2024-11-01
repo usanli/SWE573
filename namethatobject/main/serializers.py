@@ -22,9 +22,9 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'post', 'text', 'created_at', 'author', 'parent', 'replies']
 
 class PostSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True)
+    tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)  # Accept tags as a list of IDs
     comments = CommentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Post
-        fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'comments']  # Specify fields here
+        fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'comments']

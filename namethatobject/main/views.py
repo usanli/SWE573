@@ -4,6 +4,7 @@ from .forms import CommentForm
 from rest_framework import viewsets
 from .models import Post, Comment, Tag
 from .serializers import PostSerializer, CommentSerializer, TagSerializer
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 def post_list(request):
     posts = Post.objects.all()
@@ -32,11 +33,14 @@ def post_detail(request, post_id):
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
