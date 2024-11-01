@@ -1,7 +1,5 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
+from django.contrib.auth.models import User  # Import User model if you're using Django's default user model
 
 class Tag(models.Model):
     name = models.CharField(max_length=100)
@@ -27,6 +25,8 @@ class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)  # Track the user who posted the comment
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
 
     def __str__(self):
-        return f'Comment on {self.post.title}'
+        return f'Comment by {self.author} on {self.post.title}'
