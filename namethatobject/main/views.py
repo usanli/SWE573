@@ -1,10 +1,15 @@
+# views.py
+
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Post
+from rest_framework import viewsets, generics, status
+from rest_framework.response import Response
+from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
+from .models import Post, Comment, Tag, UserProfile  # Ensure UserProfile is imported
 from .forms import CommentForm
-from rest_framework import viewsets
-from .models import Post, Comment, Tag
 from .serializers import PostSerializer, CommentSerializer, TagSerializer
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework import serializers
 
 def post_list(request):
     posts = Post.objects.all()
@@ -48,3 +53,67 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+# User Serializer for Sign-Up
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'email']  # Include email if needed
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data.get('email')  # Ensure email is saved
+        )
+        return user
+
+class SignUpView(generics.CreateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        # Generate a token for the new user
+        token, created = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            "user_id": user.id,
+            "username": user.username,
+            "token": token.key
+        }, status=status.HTTP_201_CREATED)
+
+# Profile View
+class UserProfileView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        # Check if the profile exists
+        if hasattr(user, 'profile'):
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "profile": {
+                    "name": user.profile.name,
+                    "surname": user.profile.surname,
+                    "date_of_birth": user.profile.date_of_birth,
+                }
+            }
+        else:
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "profile": {
+                    "name": None,
+                    "surname": None,
+                    "date_of_birth": None,
+                }
+            }
+        return Response(user_data, status=status.HTTP_200_OK)

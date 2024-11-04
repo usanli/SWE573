@@ -9,6 +9,19 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchResults, setSearchResults] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token')); // Check if token exists
+  const [username, setUsername] = useState(''); // State for username
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const userData = JSON.parse(localStorage.getItem('userData')); // Retrieve user data
+      if (userData) {
+        setUsername(userData.username); // Set the username from userData
+      }
+    }
+    setIsLoggedIn(!!localStorage.getItem('token')); // Update login status on path change
+  }, [location.pathname]);
 
   const handleSearchChange = async (e) => {
     const term = e.target.value;
@@ -42,10 +55,13 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
     setSearchTerm('');
   };
 
-  useEffect(() => {
-    setSearchTerm('');
-    setSearchResults([]);
-  }, [location.pathname, setSearchTerm]);
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Remove the token from local storage
+    localStorage.removeItem('userData'); // Remove user data from local storage
+    setIsLoggedIn(false); // Update logged-in state
+    setUsername(''); // Clear username
+    navigate('/'); // Redirect to home page
+  };
 
   return (
     <nav className="navbar navbar-expand-lg" style={{ backgroundColor: 'var(--background-gray)' }}>
@@ -55,6 +71,24 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
         </Link>
         
         <div className="collapse navbar-collapse justify-content-end">
+          <div className="navbar-nav">
+            {isLoggedIn ? (
+              <>
+                <Link className="nav-link" to="/profile" style={{ color: 'var(--primary-text-gray)' }}>
+                  {username} {/* Display username as a link */}
+                </Link>
+                <button className="nav-link btn btn-link" style={{ color: 'var(--primary-text-gray)' }} onClick={handleLogout}>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className="nav-link" to="/signup" style={{ color: 'var(--primary-text-gray)' }}>Sign Up</Link>
+                <Link className="nav-link" to="/signin" style={{ color: 'var(--primary-text-gray)' }}>Sign In</Link>
+              </>
+            )}
+          </div>
+
           <form className="form-inline my-2 my-lg-0 position-relative" onSubmit={handleSearchSubmit}>
             <input
               type="text"

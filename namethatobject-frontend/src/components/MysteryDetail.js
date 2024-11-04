@@ -3,12 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import Modal from 'react-modal';
 
 const MysteryDetail = () => {
   const { id } = useParams();
   const [mystery, setMystery] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token')); // Check if user is logged in
 
   useEffect(() => {
     // Fetch the mystery details
@@ -37,16 +41,25 @@ const MysteryDetail = () => {
       .catch(error => console.error('Error posting comment:', error));
   };
 
-  // Function to render comments with nesting for replies
   const renderComments = (parentId = null) => {
     return comments
       .filter(comment => comment.parent === parentId)
       .map(comment => (
         <li key={comment.id} className="list-group-item">
           <strong>{comment.author.username}</strong>: {comment.text}
-          <ul>{renderComments(comment.id)}</ul> {/* Recursively render replies */}
+          <ul>{renderComments(comment.id)}</ul>
         </li>
       ));
+  };
+
+  const openModal = (media) => {
+    setSelectedMedia(media);
+    setModalIsOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalIsOpen(false);
+    setSelectedMedia('');
   };
 
   if (!mystery) return <p>Loading...</p>;
@@ -56,16 +69,21 @@ const MysteryDetail = () => {
       <h1 className="text-center mb-4">{mystery.title}</h1>
       <div className="text-center mb-4">
         {mystery.image && (
-          <img 
-            src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`} 
-            alt={mystery.title} 
-            className="img-fluid" 
-          />
+          <div className="media-container" onClick={() => openModal(mystery.image)}>
+            <img 
+              src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`} 
+              alt={mystery.title} 
+              className="img-fluid"
+              style={{ maxWidth: '300px', maxHeight: '200px' }}
+            />
+          </div>
         )}
         {mystery.video && (
-          <video controls className="mt-4 w-100">
-            <source src={mystery.video.startsWith('http') ? mystery.video : `${API_BASE_URL}${mystery.video}`} type="video/mp4" />
-          </video>
+          <div className="media-container" onClick={() => openModal(mystery.video)}>
+            <video controls className="mt-4" style={{ maxWidth: '300px', maxHeight: '200px' }}>
+              <source src={mystery.video.startsWith('http') ? mystery.video : `${API_BASE_URL}${mystery.video}`} type="video/mp4" />
+            </video>
+          </div>
         )}
         {mystery.audio && (
           <audio controls className="mt-4">
@@ -81,20 +99,48 @@ const MysteryDetail = () => {
         <ul className="list-group">
           {renderComments()} {/* Render top-level comments and their replies */}
         </ul>
-        <form onSubmit={handleCommentSubmit} className="mt-4">
-          <div className="form-group">
-            <label htmlFor="newComment">Add a comment:</label>
-            <textarea
-              id="newComment"
-              className="form-control"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary mt-2">Submit Comment</button>
-        </form>
+
+        {/* Render comment box only for logged-in users */}
+        {isLoggedIn ? (
+          <form onSubmit={handleCommentSubmit} className="mt-4">
+            <div className="form-group">
+              <label htmlFor="newComment">Add a comment:</label>
+              <textarea
+                id="newComment"
+                className="form-control"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary mt-2">Submit Comment</button>
+          </form>
+        ) : (
+          <p className="mt-4">You must be logged in to comment.</p>
+        )}
       </div>
+
+      {/* Modal for full-size media */}
+      <Modal 
+        isOpen={modalIsOpen}
+        onRequestClose={closeModal}
+        contentLabel="Media Modal"
+        ariaHideApp={false}
+      >
+        <button onClick={closeModal}>Close</button>
+        {selectedMedia && (
+          <div>
+            {selectedMedia.endsWith('.mp4') || selectedMedia.endsWith('.webm') ? (
+              <video controls style={{ width: '100%' }}>
+                <source src={selectedMedia} />
+                Your browser does not support the video tag.
+              </video>
+            ) : (
+              <img src={selectedMedia} alt="Full Size" style={{ width: '100%' }} />
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

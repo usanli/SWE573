@@ -6,11 +6,19 @@ import { API_BASE_URL } from '../config';
 
 const MysteryList = ({ searchTerm }) => {
   const [mysteries, setMysteries] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');  // State for success message
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/posts/`)
       .then(response => setMysteries(response.data))
       .catch(error => console.error('Error fetching mysteries:', error));
+
+    // Retrieve success message from local storage
+    const message = localStorage.getItem('successMessage');
+    if (message) {
+      setSuccessMessage(message);
+      localStorage.removeItem('successMessage');  // Clear message after displaying
+    }
   }, []);
 
   const filteredMysteries = mysteries.filter(mystery =>
@@ -21,6 +29,10 @@ const MysteryList = ({ searchTerm }) => {
   return (
     <div className="container mt-4">
       <h1 className="text-center mb-4" style={{ color: 'var(--primary-text-gray)' }}>Mysteries</h1>
+
+      {/* Display success message */}
+      {successMessage && <div className="alert alert-success">{successMessage}</div>}
+
       <div className="row">
         {filteredMysteries.length > 0 ? (
           filteredMysteries.map(mystery => (
