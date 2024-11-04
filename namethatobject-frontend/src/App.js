@@ -1,14 +1,24 @@
-import logo from './logo.svg';
-import './App.css';
-import React from 'react';
-import PostList from './components/PostList';
+// src/App.js
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import MysteryList from './components/MysteryList'; // Updated import
+import MysteryDetail from './components/MysteryDetail';
+import SearchResults from './components/SearchResults';
 
-function App() {
+const App = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+
   return (
-    <div className="App">
-      <PostList />
-    </div>
+    <Router>
+      <Navbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <Routes>
+        <Route path="/" element={<MysteryList searchTerm={searchTerm} />} />  {/* Updated component */}
+        <Route path="/mystery/:id" element={<MysteryDetail />} />
+        <Route path="/search" element={<SearchResults />} />
+      </Routes>
+    </Router>
   );
-}
+};
 
 export default App;

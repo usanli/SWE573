@@ -36,3 +36,70 @@
     transform: rotate(360deg);
   }
 }
+
+/* Ensure dropdown is above other elements */
+.position-absolute {
+  z-index: 1000;
+}
+
+/* Make sure no other elements overlap the search bar */
+.navbar .form-control {
+  position: relative;
+  z-index: 1001;
+}
+
+/* index.css or App.css */
+:root {
+  --primary-blue: #007BFF;
+  --primary-blue-hover: #0056b3;
+  --background-gray: #F5F5F5;
+  --primary-text-gray: #343A40;
+  --secondary-text-gray: #6C757D;
+  --accent-yellow: #FFD700;
+  --accent-green: #28A745;
+}
+
+body {
+  background-color: var(--background-gray);
+  color: var(--primary-text-gray);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary-text-gray);
+}
+
+p, .secondary-text {
+  color: var(--secondary-text-gray);
+}
+
+/* Button Styles */
+button, .btn-primary {
+  background-color: var(--primary-blue);
+  color: #ffffff;
+  border: none;
+}
+
+button:hover, .btn-primary:hover {
+  background-color: var(--primary-blue-hover);
+  color: #ffffff;
+}
+
+/* Link Styles */
+a {
+  color: var(--primary-blue);
+}
+
+a:hover {
+  color: var(--primary-blue-hover);
+}
+
+/* Accent styles */
+.badge-yellow {
+  background-color: var(--accent-yellow);
+  color: #343A40;
+}
+
+.badge-green {
+  background-color: var(--accent-green);
+  color: #ffffff;
+}
