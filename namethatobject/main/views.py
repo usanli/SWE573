@@ -6,10 +6,9 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
-from .models import Post, Comment, Tag, UserProfile  # Ensure UserProfile is imported
+from .models import Post, Comment, Tag, UserProfile
 from .forms import CommentForm
-from .serializers import PostSerializer, CommentSerializer, TagSerializer
-from rest_framework import serializers
+from .serializers import PostSerializer, CommentSerializer, TagSerializer, UserSerializer
 
 def post_list(request):
     posts = Post.objects.all()
@@ -46,28 +45,12 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        # Automatically set the author to the currently logged-in user
         serializer.save(author=self.request.user)
 
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-
-# User Serializer for Sign-Up
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username', 'password', 'email']  # Include email if needed
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            password=validated_data['password'],
-            email=validated_data.get('email')  # Ensure email is saved
-        )
-        return user
 
 class SignUpView(generics.CreateAPIView):
     serializer_class = UserSerializer
@@ -87,33 +70,14 @@ class SignUpView(generics.CreateAPIView):
             "token": token.key
         }, status=status.HTTP_201_CREATED)
 
-# Profile View
 class UserProfileView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        # Check if the profile exists
-        if hasattr(user, 'profile'):
-            user_data = {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "profile": {
-                    "name": user.profile.name,
-                    "surname": user.profile.surname,
-                    "date_of_birth": user.profile.date_of_birth,
-                }
-            }
-        else:
-            user_data = {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "profile": {
-                    "name": None,
-                    "surname": None,
-                    "date_of_birth": None,
-                }
-            }
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+        }
         return Response(user_data, status=status.HTTP_200_OK)

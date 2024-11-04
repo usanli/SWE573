@@ -7,7 +7,8 @@ import MysteryDetail from './components/MysteryDetail';
 import SearchResults from './components/SearchResults';
 import Signup from './components/Signup';
 import Signin from './components/Signin';
-import Profile from './components/Profile';  // Import the Profile component
+import Profile from './components/Profile';
+import PostMystery from './components/PostMystery';  // Update the import
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,7 +22,8 @@ const App = () => {
         <Route path="/search" element={<SearchResults />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/signin" element={<Signin />} />
-        <Route path="/profile" element={<Profile />} />  {/* Add the profile route */}
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/post-mystery" element={<PostMystery />} />  {/* Add the new route */}
       </Routes>
     </Router>
   );

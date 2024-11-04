@@ -9,18 +9,24 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchResults, setSearchResults] = useState([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token')); // Check if token exists
-  const [username, setUsername] = useState(''); // State for username
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      const userData = JSON.parse(localStorage.getItem('userData')); // Retrieve user data
+      const userData = JSON.parse(localStorage.getItem('userData'));
       if (userData) {
-        setUsername(userData.username); // Set the username from userData
+        setUsername(userData.username);
       }
     }
-    setIsLoggedIn(!!localStorage.getItem('token')); // Update login status on path change
+    setIsLoggedIn(!!localStorage.getItem('token'));
+  }, [location.pathname]);
+
+  // Clear search term and results on page change
+  useEffect(() => {
+    setSearchTerm('');
+    setSearchResults([]);
   }, [location.pathname]);
 
   const handleSearchChange = async (e) => {
@@ -56,11 +62,12 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove the token from local storage
-    localStorage.removeItem('userData'); // Remove user data from local storage
-    setIsLoggedIn(false); // Update logged-in state
-    setUsername(''); // Clear username
-    navigate('/'); // Redirect to home page
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
+    localStorage.setItem('logoutMessage', 'You have successfully logged out.');
+    setIsLoggedIn(false);
+    setUsername('');
+    navigate('/');
   };
 
   return (
@@ -69,13 +76,23 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
         <Link className="navbar-brand" to="/" style={{ color: 'var(--primary-text-gray)' }}>
           <img src={logo} alt="NameThatObject Logo" style={{ height: '40px' }} />
         </Link>
-        
+
         <div className="collapse navbar-collapse justify-content-end">
           <div className="navbar-nav">
+            {isLoggedIn && (
+              <Link
+                className="nav-link btn btn-primary text-white me-2"
+                to="/post-mystery"
+                style={{ backgroundColor: 'var(--primary-blue)' }}
+              >
+                Post a Mystery
+              </Link>
+            )}
+
             {isLoggedIn ? (
               <>
                 <Link className="nav-link" to="/profile" style={{ color: 'var(--primary-text-gray)' }}>
-                  {username} {/* Display username as a link */}
+                  {username}
                 </Link>
                 <button className="nav-link btn btn-link" style={{ color: 'var(--primary-text-gray)' }} onClick={handleLogout}>
                   Logout
@@ -98,10 +115,9 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
               onChange={handleSearchChange}
               style={{ width: '250px', borderColor: 'var(--primary-blue)' }}
             />
-            {/* Dropdown for search results */}
             {searchResults.length > 0 && (
-              <ul 
-                className="list-group position-absolute bg-white shadow" 
+              <ul
+                className="list-group position-absolute bg-white shadow"
                 style={{ top: '100%', left: 0, right: 0, zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}
               >
                 {searchResults.map(result => (

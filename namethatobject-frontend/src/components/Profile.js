@@ -39,9 +39,6 @@ const Profile = () => {
         <div>
           <h4>Username: {userData.username}</h4>
           <h4>Email: {userData.email}</h4>
-          <h4>Name: {userData.profile.name}</h4>
-          <h4>Surname: {userData.profile.surname}</h4>
-          <h4>Date of Birth: {userData.profile.date_of_birth}</h4>
         </div>
       ) : (
         <p>Loading user information...</p>
