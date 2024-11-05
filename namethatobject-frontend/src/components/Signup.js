@@ -12,7 +12,7 @@ const Signup = () => {
     });
 
     const [message, setMessage] = useState('');
-    const navigate = useNavigate(); // Use navigate to redirect
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,53 +21,67 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            // Sign up the user
             const signupResponse = await axios.post(`${API_BASE_URL}/signup/`, formData);
             const { username, token } = signupResponse.data;
-
-            // Store the token in local storage
             localStorage.setItem('token', token);
             localStorage.setItem('userData', JSON.stringify({ username }));
-
-            // Show success message and redirect to the main page
             setMessage(`Signup successful! Welcome, ${username}!`);
-            navigate('/'); // Redirect to main page
+            navigate('/');
         } catch (error) {
             setMessage('Signup failed. Please check your input and try again.');
         }
     };
 
     return (
-        <div>
-            <h2>Sign Up</h2>
-            <form onSubmit={handleSubmit}>
-                <input 
-                    type="text" 
-                    name="username" 
-                    placeholder="Username" 
-                    value={formData.username} 
-                    onChange={handleChange} 
-                    required 
-                />
-                <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="Password" 
-                    value={formData.password} 
-                    onChange={handleChange} 
-                    required 
-                />
-                <input 
-                    type="email" 
-                    name="email" 
-                    placeholder="Email" 
-                    value={formData.email} 
-                    onChange={handleChange} 
-                    required 
-                />
-                <button type="submit">Sign Up</button>
-            </form>
-            <p>{message}</p> {/* Display success/error message */}
+        <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+            <div className="card shadow-sm p-4" style={{ width: '100%', maxWidth: '400px' }}>
+                <h2 className="text-center mb-4">Create an Account</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-3">
+                        <label htmlFor="username" className="form-label">Username</label>
+                        <input
+                            type="text"
+                            name="username"
+                            id="username"
+                            className="form-control"
+                            placeholder="Enter your username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label htmlFor="password" className="form-label">Password</label>
+                        <input
+                            type="password"
+                            name="password"
+                            id="password"
+                            className="form-control"
+                            placeholder="Enter your password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="email" className="form-label">Email</label>
+                        <input
+                            type="email"
+                            name="email"
+                            id="email"
+                            className="form-control"
+                            placeholder="Enter your email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+                    <button type="submit" className="btn btn-primary w-100">Sign Up</button>
+                </form>
+                {message && (
+                    <div className="alert alert-info mt-4 text-center">{message}</div>
+                )}
+            </div>
         </div>
     );
 };
