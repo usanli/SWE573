@@ -64,7 +64,9 @@ const PostMystery = () => {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    formData.append('tags', tags.map(tag => tag.id));
+    if (tags.length > 0) {
+      formData.append('tags', JSON.stringify(tags.map(tag => tag.id)));
+    }
     if (image) formData.append('image', image);
     if (audio) formData.append('audio', audio);
 
@@ -121,7 +123,7 @@ const PostMystery = () => {
 
           {/* Tags Field with Suggestions */}
           <div className="form-group mt-3">
-            <label htmlFor="tags">Tags</label>
+            <label htmlFor="tags">Tags (Optional)</label>
             <input
               type="text"
               id="tags"

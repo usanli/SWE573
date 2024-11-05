@@ -81,7 +81,7 @@ WSGI_APPLICATION = 'namethatobject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'name_that_object_db',      # Replace with your actual database name
+        'NAME': 'nto_db',      # Replace with your actual database name
         'USER': 'admin',                   # Replace with the MySQL username you created
         'PASSWORD': '1qw212wq',       # Replace with the MySQL password you set
         'HOST': 'localhost',               # Set to '127.0.0.1' or 'localhost' for a local MySQL server

@@ -16,7 +16,7 @@ class Post(models.Model):
     video = models.FileField(upload_to='videos/', blank=True, null=True)
     audio = models.FileField(upload_to='audio/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.ManyToManyField(Tag, related_name='posts')
+    tags = models.ManyToManyField(Tag, related_name='posts', blank=True, null=True)
 
     def __str__(self):
         return self.title
