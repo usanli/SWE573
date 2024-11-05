@@ -1,14 +1,19 @@
 from pathlib import Path
 import os
+import environ
 
 # Base directory of your project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Initialize environment variables
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
 # Security settings
 SECRET_KEY = 'django-insecure-rw+w$afnp_)3#t*!4v2@y4v8slmihuxuie^a-h0*$)1l8&1!0-'
-DEBUG = False  # Set to True for local testing; remember to set it back to False in production
+DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = ['namethatobject.com', 'www.namethatobject.com', 'localhost', '127.0.0.1', '85.95.239.184']  # Include local hosts for testing
+ALLOWED_HOSTS = ['namethatobject.com', 'www.namethatobject.com', 'localhost', '127.0.0.1', '85.95.239.184']
 
 # Application definition
 INSTALLED_APPS = [
@@ -92,7 +97,14 @@ USE_TZ = True
 # Static and media files settings
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-MEDIA_URL = '/media/'
+
+# Use different MEDIA_URL values based on the environment
+ENVIRONMENT = env("ENVIRONMENT")
+if ENVIRONMENT == "production":
+    MEDIA_URL = 'https://namethatobject.com/namethatobject/media/'  # Production URL
+else:
+    MEDIA_URL = '/media/'  # Local development URL
+
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
@@ -110,12 +122,11 @@ REST_FRAMEWORK = {
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React app running on localhost
+    "http://localhost:3000",
     "https://namethatobject.com",
     "https://www.namethatobject.com",
 ]
 
-# CSRF Trusted Origins for POST requests to the Django admin or API
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "https://namethatobject.com",
