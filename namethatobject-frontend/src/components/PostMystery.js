@@ -45,6 +45,10 @@ const PostMystery = () => {
     setTagInput('');
   };
 
+  const removeTag = (tagId) => {
+    setTags(tags.filter(tag => tag.id !== tagId));
+  };
+
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     if (name === 'image') {
@@ -83,92 +87,110 @@ const PostMystery = () => {
   };
 
   return (
-    <div className="container mt-4">
-      <h2>Post a Mystery</h2>
-      {message && <div className="alert alert-info">{message}</div>}
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        <div className="form-group">
-          <label htmlFor="title">Title</label>
-          <input
-            type="text"
-            id="title"
-            className="form-control"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group mt-3">
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            className="form-control"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group mt-3">
-          <label htmlFor="tags">Tags</label>
-          <input
-            type="text"
-            id="tags"
-            className="form-control"
-            value={tagInput}
-            onChange={handleTagInputChange}
-            placeholder="Start typing to see suggestions..."
-          />
-          {tagInput && (
-            <ul className="list-group mt-1">
-              {suggestedTags.map(tag => (
-                <li
-                  key={tag.id}
-                  className="list-group-item list-group-item-action"
-                  onClick={() => addTag(tag)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {tag.name}
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-2">
-            {tags.map(tag => (
-              <span key={tag.id} className="badge bg-primary me-1">
-                {tag.name}
-              </span>
-            ))}
+    <div className="container mt-4 d-flex justify-content-center">
+      <div className="w-100" style={{ maxWidth: '600px' }}>
+        <h2 className="text-center mb-4">Post a Mystery</h2>
+        {message && <div className="alert alert-info">{message}</div>}
+        <form onSubmit={handleSubmit} encType="multipart/form-data">
+          
+          {/* Title Field */}
+          <div className="form-group">
+            <label htmlFor="title">Title</label>
+            <input
+              type="text"
+              id="title"
+              className="form-control"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
           </div>
-        </div>
 
-        <div className="form-group mt-3">
-          <label htmlFor="image">Upload Image</label>
-          <input
-            type="file"
-            id="image"
-            name="image"
-            accept="image/*"
-            className="form-control"
-            onChange={handleFileChange}
-          />
-        </div>
+          {/* Description Field */}
+          <div className="form-group mt-3">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              className="form-control"
+              rows="4"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
 
-        <div className="form-group mt-3">
-          <label htmlFor="audio">Upload Audio</label>
-          <input
-            type="file"
-            id="audio"
-            name="audio"
-            accept="audio/*"
-            className="form-control"
-            onChange={handleFileChange}
-          />
-        </div>
+          {/* Tags Field with Suggestions */}
+          <div className="form-group mt-3">
+            <label htmlFor="tags">Tags</label>
+            <input
+              type="text"
+              id="tags"
+              className="form-control"
+              value={tagInput}
+              onChange={handleTagInputChange}
+              placeholder="Type to add tags..."
+            />
+            {tagInput && (
+              <ul className="list-group mt-1">
+                {suggestedTags.map(tag => (
+                  <li
+                    key={tag.id}
+                    className="list-group-item list-group-item-action"
+                    onClick={() => addTag(tag)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {tag.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-2">
+              {tags.map(tag => (
+                <span key={tag.id} className="badge bg-primary me-1">
+                  {tag.name}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-1"
+                    aria-label="Remove"
+                    onClick={() => removeTag(tag.id)}
+                    style={{ fontSize: '0.7rem' }}
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
 
-        <button type="submit" className="btn btn-primary mt-4">Post Mystery</button>
-      </form>
+          {/* File Uploads for Image and Audio */}
+          <div className="form-group mt-3">
+            <label htmlFor="image">Upload Image</label>
+            <input
+              type="file"
+              id="image"
+              name="image"
+              accept="image/*"
+              className="form-control"
+              onChange={handleFileChange}
+            />
+          </div>
+          
+          <div className="form-group mt-3">
+            <label htmlFor="audio">Upload Audio</label>
+            <input
+              type="file"
+              id="audio"
+              name="audio"
+              accept="audio/*"
+              className="form-control"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button type="submit" className="btn btn-primary mt-4 w-100">
+            Post Mystery
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
