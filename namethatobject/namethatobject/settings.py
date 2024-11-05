@@ -6,8 +6,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security settings
 SECRET_KEY = 'django-insecure-rw+w$afnp_)3#t*!4v2@y4v8slmihuxuie^a-h0*$)1l8&1!0-'
-DEBUG = False
-ALLOWED_HOSTS = ['namethatobject.com', 'www.namethatobject.com']
+DEBUG = False  # Set to True for local testing; remember to set it back to False in production
+
+ALLOWED_HOSTS = ['namethatobject.com', 'www.namethatobject.com', 'localhost', '127.0.0.1', '85.95.239.184']  # Include local hosts for testing
 
 # Application definition
 INSTALLED_APPS = [
@@ -90,7 +91,7 @@ USE_TZ = True
 
 # Static and media files settings
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Add this line to specify the static files directory
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -110,4 +111,11 @@ REST_FRAMEWORK = {
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React app running on localhost
+]
+
+# CSRF Trusted Origins for POST requests to the Django admin or API
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "https://namethatobject.com",
+    "https://www.namethatobject.com",
 ]
