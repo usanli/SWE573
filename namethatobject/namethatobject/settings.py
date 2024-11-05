@@ -111,6 +111,8 @@ REST_FRAMEWORK = {
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React app running on localhost
+    "https://namethatobject.com",
+    "https://www.namethatobject.com",
 ]
 
 # CSRF Trusted Origins for POST requests to the Django admin or API
