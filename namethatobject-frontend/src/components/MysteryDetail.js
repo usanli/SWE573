@@ -29,17 +29,36 @@ const MysteryDetail = () => {
       .catch(error => console.error('Error fetching comments:', error));
   }, [id]);
 
-  const handleCommentSubmit = (e) => {
-    e.preventDefault();
+const handleCommentSubmit = (e) => {
+  e.preventDefault();
 
-    // Post new comment
-    axios.post(`${API_BASE_URL}/comments/`, { post: id, text: newComment })
-      .then(response => {
-        setComments([...comments, response.data]);
-        setNewComment('');
-      })
-      .catch(error => console.error('Error posting comment:', error));
-  };
+  const token = localStorage.getItem('token');
+  const commentData = { post: parseInt(id), text: newComment };  // Ensure 'post' is an integer if needed
+
+  console.log("Submitting comment data:", commentData); // Log data for debugging
+
+  axios.post(
+    `${API_BASE_URL}/comments/`,
+    commentData,
+    {
+      headers: {
+        Authorization: `Token ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+    .then(response => {
+      console.log("Comment posted successfully:", response.data);
+      setComments([...comments, response.data]);
+      setNewComment('');
+    })
+    .catch(error => {
+      console.error('Error posting comment:', error);
+      console.error("Error details:", error.response?.data);  // Log backend error message if available
+    });
+};
+
+
 
   const renderComments = (parentId = null) => {
     return comments

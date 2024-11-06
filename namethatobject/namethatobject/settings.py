@@ -1,19 +1,27 @@
 from pathlib import Path
 import os
 import environ
-
-# Base directory of your project
-BASE_DIR = Path(__file__).resolve().parent.parent
+import logging
 
 # Initialize environment variables
 env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security settings
-SECRET_KEY = 'django-insecure-rw+w$afnp_)3#t*!4v2@y4v8slmihuxuie^a-h0*$)1l8&1!0-'
-DEBUG = env.bool("DEBUG", default=False)
+# Load .env file
+env_file = os.path.join(BASE_DIR, '.env')
+if os.path.exists(env_file):
+    print("Loading .env file...")  # Debug print
+    environ.Env.read_env(env_file)
+else:
+    print("No .env file found.")  # Debug print
 
-ALLOWED_HOSTS = ['namethatobject.com', 'www.namethatobject.com', 'localhost', '127.0.0.1', '85.95.239.184']
+# Secret settings
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-rw+w$afnp_)3#t*!4v2@y4v8slmihuxuie^a-h0*$)1l8&1!0-')
+DEBUG = env.bool('DEBUG', default=False)
+print(f"DEBUG mode is {'ON' if DEBUG else 'OFF'}")  # Debug print
+
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1'])
+print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")  # Debug print
 
 # Application definition
 INSTALLED_APPS = [
@@ -60,7 +68,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'namethatobject.wsgi.application'
 
-# Database settings
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -72,7 +80,6 @@ DATABASES = {
     }
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -88,29 +95,19 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static and media files settings
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Use different MEDIA_URL values based on the environment
-ENVIRONMENT = env("ENVIRONMENT")
-if ENVIRONMENT == "production":
-    MEDIA_URL = 'https://namethatobject.com/namethatobject/media/'  # Production URL
-else:
-    MEDIA_URL = '/media/'  # Local development URL
-
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -120,15 +117,26 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://namethatobject.com",
-    "https://www.namethatobject.com",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "https://namethatobject.com",
-    "https://www.namethatobject.com",
-]
+# Logging setup to output errors to console in development
+if DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    }
+
+    print("Logging is set to DEBUG mode")  # Debug print
+else:
+    print("Running in Production Mode")
