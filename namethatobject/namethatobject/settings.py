@@ -117,9 +117,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://85.95.239.184:8000"
-]
+CORS_ORIGIN_ALLOW_ALL = True
 
 # Logging setup to output errors to console in development
 if DEBUG:
