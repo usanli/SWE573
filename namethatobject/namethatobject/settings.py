@@ -118,7 +118,7 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "http://85.95.239.184:8000"
 ]
 
 # Logging setup to output errors to console in development
