@@ -9,6 +9,7 @@ from main.views import SignUpView  # Import the SignUpView from your main app
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('posts/', include('main.urls')),
     path('', include('main.urls')),  # Include main app URLs
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),  # Sign-in endpoint
     path('signup/', SignUpView.as_view(), name='signup'),  # Sign-up endpoint
