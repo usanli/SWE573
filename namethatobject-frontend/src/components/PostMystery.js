@@ -16,6 +16,50 @@ const PostMystery = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
+  // Function to identify the image using Hugging Face BLIP API
+  const identifyImage = async (file) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+      const base64Image = reader.result.split(",")[1]; // Remove the prefix
+
+      const payload = {
+        inputs: base64Image
+      };
+
+      try {
+        const response = await axios.post(
+          "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base",
+          payload,
+          {
+            headers: {
+              Authorization: "Bearer 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",
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+        if (response.data && response.data[0] && response.data[0].generated_text) {
+          setDescription(response.data[0].generated_text);
+        } else {
+          console.error("No caption generated");
+          setDescription("Could not generate a description for the image.");
+        }
+      } catch (error) {
+        console.error("Error generating description:", error);
+        setDescription("Error generating a description for the image.");
+      }
+    };
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setImage(file);
+    if (file) {
+      identifyImage(file);  // Call the identifyImage function when an image is uploaded
+    }
+  };
+
   const fetchTagSuggestions = async (query) => {
     if (!query) return setTagSuggestions([]);
     try {
@@ -76,9 +120,11 @@ const PostMystery = () => {
   return (
     <div className="container mt-4" style={{ maxWidth: '600px' }}>
       <h2 className="text-center">Post a Mystery</h2>
+      
       <form onSubmit={handleSubmit}>
+        {/* Title Input Section */}
         <div className="form-group mt-3">
-          <label htmlFor="title">Title</label>
+          <label htmlFor="title"><strong>Step 1: Title</strong></label>
           <input
             type="text"
             className="form-control"
@@ -86,56 +132,41 @@ const PostMystery = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            placeholder="Enter a title for your mystery"
           />
         </div>
 
+        {/* Image Upload Section */}
         <div className="form-group mt-3">
-          <label htmlFor="description">Description</label>
+          <label htmlFor="image"><strong>Step 2: Upload an Image</strong></label>
+          <input
+            type="file"
+            className="form-control"
+            id="image"
+            onChange={handleImageChange}
+            accept="image/*"
+          />
+          <small className="form-text text-muted">
+            Upload an image to generate a sample description. You can edit it later if needed.
+          </small>
+        </div>
+
+        {/* Generated Description Section */}
+        <div className="form-group mt-3">
+          <label htmlFor="description"><strong>Step 3: Description</strong></label>
           <textarea
             className="form-control"
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
             style={{ height: '100px' }}
+            placeholder="Description will appear here after image upload"
           />
         </div>
 
+        {/* Tag Search and Selection Section */}
         <div className="form-group mt-3">
-          <label htmlFor="image">Image</label>
-          <input
-            type="file"
-            className="form-control"
-            id="image"
-            onChange={(e) => setImage(e.target.files[0])}
-            accept="image/*"
-          />
-        </div>
-
-        <div className="form-group mt-3">
-          <label htmlFor="video">Video</label>
-          <input
-            type="file"
-            className="form-control"
-            id="video"
-            onChange={(e) => setVideo(e.target.files[0])}
-            accept="video/*"
-          />
-        </div>
-
-        <div className="form-group mt-3">
-          <label htmlFor="audio">Audio</label>
-          <input
-            type="file"
-            className="form-control"
-            id="audio"
-            onChange={(e) => setAudio(e.target.files[0])}
-            accept="audio/*"
-          />
-        </div>
-
-        <div className="form-group mt-3">
-          <label htmlFor="tagSearch">Tags</label>
+          <label htmlFor="tagSearch"><strong>Step 4: Add Tags</strong></label>
           <input
             type="text"
             className="form-control"
@@ -174,6 +205,30 @@ const PostMystery = () => {
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* Video and Audio Uploads */}
+        <div className="form-group mt-3">
+          <label htmlFor="video"><strong>Step 5: Additional Media</strong></label>
+          <input
+            type="file"
+            className="form-control"
+            id="video"
+            onChange={(e) => setVideo(e.target.files[0])}
+            accept="video/*"
+          />
+          <small className="form-text text-muted">Upload a video (optional).</small>
+        </div>
+
+        <div className="form-group mt-3">
+          <input
+            type="file"
+            className="form-control"
+            id="audio"
+            onChange={(e) => setAudio(e.target.files[0])}
+            accept="audio/*"
+          />
+          <small className="form-text text-muted">Upload an audio file (optional).</small>
         </div>
 
         <button type="submit" className="btn btn-primary mt-3 w-100">
