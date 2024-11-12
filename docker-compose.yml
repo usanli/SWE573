@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ./namethatobject  # Your backend directory
+      dockerfile: Dockerfile
+    container_name: django_backend
+    env_file:
+      - ./namethatobject/.env  # Path to the backend's .env file
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./media:/app/media  # Mount local media folder to the container's /app/media
+
+  frontend:
+    build:
+      context: ./namethatobject-frontend  # Your frontend directory
+      dockerfile: Dockerfile
+    container_name: react_frontend
+    env_file:
+      - ./namethatobject-frontend/.env  # Path to the frontend's .env file
+    ports:
+      - "3000:80"
+
+  db:
+    image: postgres:13
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: nto_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1qw212wq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

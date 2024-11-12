@@ -21,14 +21,15 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const signupResponse = await axios.post(`${API_BASE_URL}/signup/`, formData);
+            const signupResponse = await axios.post(`${API_BASE_URL}/api/signup/`, formData);
             const { username, token } = signupResponse.data;
             localStorage.setItem('token', token);
             localStorage.setItem('userData', JSON.stringify({ username }));
             setMessage(`Signup successful! Welcome, ${username}!`);
             navigate('/');
         } catch (error) {
-            setMessage('Signup failed. Please check your input and try again.');
+            const errorMessage = error.response?.data || 'Signup failed. Please check your input and try again.';
+            setMessage(errorMessage);
         }
     };
 

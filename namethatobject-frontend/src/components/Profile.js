@@ -1,4 +1,3 @@
-// src/components/Profile.js
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
@@ -34,10 +33,8 @@ const Profile = () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/posts/`);
         const userSpecificPosts = response.data
-          .filter((post) =>
-            post.comments.some((comment) => comment.author.username === username) || post.comments.length === 0
-          )
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          .filter((post) => post.author?.username === username)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort posts by newest first
         setUserPosts(userSpecificPosts);
       } catch (err) {
         setError('Failed to fetch user posts.');
@@ -50,7 +47,7 @@ const Profile = () => {
         const response = await axios.get(`${API_BASE_URL}/comments/`);
         const userSpecificComments = response.data
           .filter((comment) => comment.author.username === username)
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort comments by newest first
         setUserComments(userSpecificComments);
       } catch (err) {
         setError('Failed to fetch user comments.');

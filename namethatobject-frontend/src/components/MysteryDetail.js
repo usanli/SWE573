@@ -1,4 +1,3 @@
-// src/components/MysteryDetail.js
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -10,66 +9,112 @@ const MysteryDetail = () => {
   const [mystery, setMystery] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+  const [replyCommentId, setReplyCommentId] = useState(null);
+  const [replyText, setReplyText] = useState('');
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token')); // Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Fetch the mystery details
-    axios.get(`${API_BASE_URL}/posts/${id}/`)
-      .then(response => setMystery(response.data))
-      .catch(error => console.error('Error fetching mystery:', error));
+    const fetchData = async () => {
+      try {
+        const mysteryResponse = await axios.get(`${API_BASE_URL}/posts/${id}/`);
+        setMystery(mysteryResponse.data);
 
-    // Fetch all comments and filter by post ID
-    axios.get(`${API_BASE_URL}/comments/`)
-      .then(response => {
-        const postComments = response.data.filter(comment => comment.post === parseInt(id));
-        setComments(postComments);
-      })
-      .catch(error => console.error('Error fetching comments:', error));
+        const commentsResponse = await axios.get(`${API_BASE_URL}/comments/`);
+        const postComments = commentsResponse.data.filter(comment => comment.post === parseInt(id));
+
+        // Structure comments to nest replies under their parent comments
+        const structuredComments = postComments.reduce((acc, comment) => {
+          if (!comment.parent) {
+            // If comment has no parent, add it to the main comments list
+            acc.push({ ...comment, replies: [] });
+          } else {
+            // Find the parent comment and add this as a reply
+            const parentComment = acc.find(c => c.id === comment.parent);
+            if (parentComment) {
+              parentComment.replies.push(comment);
+            }
+          }
+          return acc;
+        }, []);
+
+        setComments(structuredComments);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
   }, [id]);
 
-const handleCommentSubmit = (e) => {
-  e.preventDefault();
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
 
-  const token = localStorage.getItem('token');
-  const commentData = { post: parseInt(id), text: newComment };  // Ensure 'post' is an integer if needed
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/comments/`,
+        { post: id, text: newComment, parent: "" },
+        { headers: { Authorization: `Token ${token}` } }
+      );
 
-  console.log("Submitting comment data:", commentData); // Log data for debugging
-
-  axios.post(
-    `${API_BASE_URL}/comments/`,
-    commentData,
-    {
-      headers: {
-        Authorization: `Token ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  )
-    .then(response => {
-      console.log("Comment posted successfully:", response.data);
-      setComments([...comments, response.data]);
+      setComments([...comments, { ...response.data, replies: [] }]);
       setNewComment('');
-    })
-    .catch(error => {
+    } catch (error) {
       console.error('Error posting comment:', error);
-      console.error("Error details:", error.response?.data);  // Log backend error message if available
-    });
-};
-
-
-
-  const renderComments = (parentId = null) => {
-    return comments
-      .filter(comment => comment.parent === parentId)
-      .map(comment => (
-        <li key={comment.id} className="list-group-item">
-          <strong>{comment.author.username}</strong>: {comment.text}
-          <ul>{renderComments(comment.id)}</ul>
-        </li>
-      ));
+    }
   };
+
+  const handleReplySubmit = async (e, parentId) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/comments/`,
+        { post: id, text: replyText, parent: parentId },
+        { headers: { Authorization: `Token ${token}` } }
+      );
+
+      // Add the reply to the correct parent comment
+      const updatedComments = comments.map(comment => {
+        if (comment.id === parentId) {
+          return { ...comment, replies: [...comment.replies, response.data] };
+        }
+        return comment;
+      });
+
+      setComments(updatedComments);
+      setReplyText('');
+      setReplyCommentId(null);
+    } catch (error) {
+      console.error('Error posting reply:', error);
+    }
+  };
+
+  const renderTags = () => (
+    mystery?.tags && mystery.tags.length > 0 && (
+      <div style={{ marginTop: '20px' }}>
+        <h5>Tags:</h5>
+        <ul style={{ padding: 0, listStyle: 'none' }}>
+          {mystery.tags.map((tag, index) => (
+            <li key={index} style={{ display: 'inline', marginRight: '10px' }}>
+              <span style={{
+                padding: '5px 10px',
+                borderRadius: '5px',
+                backgroundColor: '#6c757d',
+                color: '#fff'
+              }}>
+                {tag.name} (ID: {tag.wikidata_id})
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  );
 
   const openModal = (media) => {
     setSelectedMedia(media);
@@ -81,45 +126,87 @@ const handleCommentSubmit = (e) => {
     setSelectedMedia('');
   };
 
-  if (!mystery) return <p>Loading...</p>;
+  if (!mystery) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <div className="container mt-4">
       <h1 className="text-center mb-4">{mystery.title}</h1>
-      <div className="text-center mb-4">
-        {mystery.image && (
-          <div className="media-container" onClick={() => openModal(mystery.image)}>
-            <img 
-              src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`} 
-              alt={mystery.title} 
-              className="img-fluid"
-              style={{ maxWidth: '300px', maxHeight: '200px' }}
-            />
-          </div>
-        )}
-        {mystery.video && (
-          <div className="media-container" onClick={() => openModal(mystery.video)}>
-            <video controls className="mt-4" style={{ maxWidth: '300px', maxHeight: '200px' }}>
-              <source src={mystery.video.startsWith('http') ? mystery.video : `${API_BASE_URL}${mystery.video}`} type="video/mp4" />
-            </video>
-          </div>
-        )}
-        {mystery.audio && (
-          <audio controls className="mt-4">
-            <source src={mystery.audio.startsWith('http') ? mystery.audio : `${API_BASE_URL}${mystery.audio}`} type="audio/mpeg" />
-          </audio>
-        )}
-      </div>
+
+      {mystery.image && (
+        <div
+          onClick={() => openModal(mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`)}
+          style={{
+            cursor: 'pointer',
+            overflow: 'hidden',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <img
+            src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`}
+            alt={mystery.title}
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              height: '300px',
+              objectFit: 'cover',
+              borderRadius: '8px'
+            }}
+          />
+        </div>
+      )}
+
+      {renderTags()}
       <p>{mystery.description}</p>
 
-      {/* Comments Section */}
       <div className="comments-section mt-5">
         <h3>Comments</h3>
         <ul className="list-group">
-          {renderComments()} {/* Render top-level comments and their replies */}
+          {comments.map(comment => (
+            <li key={comment.id} className="list-group-item">
+              <strong>{comment.author?.username || 'Anonymous'}</strong>: {comment.text}
+              
+              {isLoggedIn && (
+                <button
+                  className="btn btn-link btn-sm"
+                  onClick={() => setReplyCommentId(comment.id)}
+                  style={{ marginLeft: '10px', color: '#007bff' }}
+                >
+                  Reply
+                </button>
+              )}
+
+              {comment.replies && comment.replies.length > 0 && (
+                <ul className="list-group mt-2">
+                  {comment.replies.map(reply => (
+                    <li key={reply.id} className="list-group-item">
+                      <strong>{reply.author?.username || 'Anonymous'}</strong>: {reply.text}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {isLoggedIn && replyCommentId === comment.id && (
+                <form onSubmit={(e) => handleReplySubmit(e, comment.id)} className="mt-2">
+                  <textarea
+                    className="form-control"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Write a reply..."
+                    required
+                    style={{ marginTop: '10px', marginBottom: '10px' }}
+                  />
+                  <button type="submit" className="btn btn-secondary btn-sm">Submit Reply</button>
+                </form>
+              )}
+            </li>
+          ))}
         </ul>
 
-        {/* Render comment box only for logged-in users */}
         {isLoggedIn ? (
           <form onSubmit={handleCommentSubmit} className="mt-4">
             <div className="form-group">
@@ -139,23 +226,44 @@ const handleCommentSubmit = (e) => {
         )}
       </div>
 
-      {/* Modal for full-size media */}
-      <Modal 
+      <Modal
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
         contentLabel="Media Modal"
         ariaHideApp={false}
+        style={{
+          content: {
+            maxWidth: '80%',
+            margin: 'auto',
+            padding: '20px',
+            backgroundColor: 'white',
+            borderRadius: '10px',
+          }
+        }}
       >
-        <button onClick={closeModal}>Close</button>
+        <button
+          onClick={closeModal}
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            fontSize: '20px',
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            cursor: 'pointer'
+          }}
+        >
+          Close
+        </button>
         {selectedMedia && (
-          <div>
+          <div style={{ textAlign: 'center' }}>
             {selectedMedia.endsWith('.mp4') || selectedMedia.endsWith('.webm') ? (
-              <video controls style={{ width: '100%' }}>
+              <video controls style={{ width: '100%', maxWidth: '100%' }}>
                 <source src={selectedMedia} />
                 Your browser does not support the video tag.
               </video>
             ) : (
-              <img src={selectedMedia} alt="Full Size" style={{ width: '100%' }} />
+              <img src={selectedMedia} alt="Full Size" style={{ width: '100%', maxWidth: '100%' }} />
             )}
           </div>
         )}

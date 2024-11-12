@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import environ
 import logging
+import dj_database_url
 
 # Initialize environment variables
 env = environ.Env()
@@ -70,14 +71,9 @@ WSGI_APPLICATION = 'namethatobject.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'nto_db',
-        'USER': 'admin',
-        'PASSWORD': '1qw212wq',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
+    'default': dj_database_url.config(
+        default=f"postgres://{env('POSTGRES_USER', default='admin')}:{env('POSTGRES_PASSWORD', default='1qw212wq')}@{env('POSTGRES_HOST', default='db')}:{env('POSTGRES_PORT', default='5432')}/{env('POSTGRES_DB', default='nto_db')}"
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -117,7 +113,9 @@ REST_FRAMEWORK = {
     ],
 }
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
 
 # Logging setup to output errors to console in development
 if DEBUG:

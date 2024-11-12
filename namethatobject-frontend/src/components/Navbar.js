@@ -23,7 +23,6 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
     setIsLoggedIn(!!localStorage.getItem('token'));
   }, [location.pathname]);
 
-  // Clear search term and results on page change
   useEffect(() => {
     setSearchTerm('');
     setSearchResults([]);
@@ -38,7 +37,8 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
         const response = await axios.get(`${API_BASE_URL}/posts/`);
         const filteredResults = response.data.filter(post =>
           post.title.toLowerCase().includes(term.toLowerCase()) ||
-          post.description.toLowerCase().includes(term.toLowerCase())
+          post.description.toLowerCase().includes(term.toLowerCase()) ||
+          (post.tags && post.tags.some(tag => tag.name.toLowerCase().includes(term.toLowerCase())))
         );
         setSearchResults(filteredResults.slice(0, 5));
       } catch (error) {
