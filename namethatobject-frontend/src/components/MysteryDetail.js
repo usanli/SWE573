@@ -15,6 +15,7 @@ const MysteryDetail = () => {
   const [selectedMedia, setSelectedMedia] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const token = localStorage.getItem('token');
+  const username = JSON.parse(localStorage.getItem('userData'))?.username;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,13 +26,10 @@ const MysteryDetail = () => {
         const commentsResponse = await axios.get(`${API_BASE_URL}/comments/`);
         const postComments = commentsResponse.data.filter(comment => comment.post === parseInt(id));
 
-        // Structure comments to nest replies under their parent comments
         const structuredComments = postComments.reduce((acc, comment) => {
           if (!comment.parent) {
-            // If comment has no parent, add it to the main comments list
             acc.push({ ...comment, replies: [] });
           } else {
-            // Find the parent comment and add this as a reply
             const parentComment = acc.find(c => c.id === comment.parent);
             if (parentComment) {
               parentComment.replies.push(comment);
@@ -48,6 +46,22 @@ const MysteryDetail = () => {
 
     fetchData();
   }, [id]);
+
+  const handleMarkSolved = async () => {
+    if (!mystery) return;
+
+    const updatedTags = [...(mystery.tags || []), { name: 'Mystery Solved!', description: 'Mystery is solved', wikidata_id: 'no_id' }];
+    try {
+      await axios.patch(
+        `${API_BASE_URL}/posts/${id}/`,
+        { tags: updatedTags },
+        { headers: { Authorization: `Token ${token}` } }
+      );
+      setMystery({ ...mystery, tags: updatedTags });
+    } catch (error) {
+      console.error('Error marking mystery as solved:', error);
+    }
+  };
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
@@ -78,7 +92,6 @@ const MysteryDetail = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      // Add the reply to the correct parent comment
       const updatedComments = comments.map(comment => {
         if (comment.id === parentId) {
           return { ...comment, replies: [...comment.replies, response.data] };
@@ -107,7 +120,7 @@ const MysteryDetail = () => {
                 backgroundColor: '#6c757d',
                 color: '#fff'
               }}>
-                {tag.name} (ID: {tag.wikidata_id})
+                {tag.name}
               </span>
             </li>
           ))}
@@ -130,9 +143,35 @@ const MysteryDetail = () => {
     return <p>Loading...</p>;
   }
 
+  const isSolved = mystery.tags?.some(tag => tag.name === 'Mystery Solved!');
+
   return (
-    <div className="container mt-4">
+    <div
+      className="container mt-4"
+      style={{
+        border: isSolved ? '4px solid #28a745' : 'none',
+        borderRadius: '10px',
+        padding: '15px',
+      }}
+    >
       <h1 className="text-center mb-4">{mystery.title}</h1>
+
+      {/* Mystery Solved Button */}
+      {isLoggedIn && username === mystery.author?.username && !isSolved && (
+        <div className="text-center mb-4">
+          <button
+            className="btn btn-success"
+            onClick={handleMarkSolved}
+          >
+            Mystery Solved
+          </button>
+        </div>
+      )}
+
+      <div className="text-center mb-4">
+        <p><strong>Posted by:</strong> {mystery.author?.username || 'Anonymous'}</p>
+        <p><strong>Created on:</strong> {new Date(mystery.created_at).toLocaleString()}</p>
+      </div>
 
       {mystery.image && (
         <div
@@ -170,7 +209,7 @@ const MysteryDetail = () => {
             <li key={comment.id} className="list-group-item">
               <strong>{comment.author?.username || 'Anonymous'}</strong>: {comment.text}
               
-              {isLoggedIn && (
+              {!isSolved && isLoggedIn && (
                 <button
                   className="btn btn-link btn-sm"
                   onClick={() => setReplyCommentId(comment.id)}
@@ -190,7 +229,7 @@ const MysteryDetail = () => {
                 </ul>
               )}
 
-              {isLoggedIn && replyCommentId === comment.id && (
+              {!isSolved && isLoggedIn && replyCommentId === comment.id && (
                 <form onSubmit={(e) => handleReplySubmit(e, comment.id)} className="mt-2">
                   <textarea
                     className="form-control"
@@ -207,7 +246,7 @@ const MysteryDetail = () => {
           ))}
         </ul>
 
-        {isLoggedIn ? (
+        {!isSolved && isLoggedIn ? (
           <form onSubmit={handleCommentSubmit} className="mt-4">
             <div className="form-group">
               <label htmlFor="newComment">Add a comment:</label>
@@ -222,7 +261,7 @@ const MysteryDetail = () => {
             <button type="submit" className="btn btn-primary mt-2">Submit Comment</button>
           </form>
         ) : (
-          <p className="mt-4">You must be logged in to comment.</p>
+          isSolved && <p className="mt-4 text-center text-danger">Comments are disabled for solved mysteries.</p>
         )}
       </div>
 

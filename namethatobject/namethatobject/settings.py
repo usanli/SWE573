@@ -115,6 +115,9 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://namethatobject.com",
+    "http://85.95.239.229/",
+    "85.95.239.229",
 ]
 
 # Logging setup to output errors to console in development
