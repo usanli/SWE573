@@ -8,11 +8,18 @@ class Post(models.Model):
     video = models.FileField(upload_to='videos/', blank=True, null=True)
     audio = models.FileField(upload_to='audio/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.JSONField(blank=True, null=True)  # Tags field (JSON)
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')  # New author field
+    tags = models.JSONField(blank=True, null=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    upvotes = models.IntegerField(default=0)
+    downvotes = models.IntegerField(default=0)
+
+    @property
+    def points(self):
+        return self.upvotes - self.downvotes
 
     def __str__(self):
         return self.title
+
 
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
@@ -20,6 +27,12 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+    upvotes = models.IntegerField(default=0)
+    downvotes = models.IntegerField(default=0)
+
+    @property
+    def points(self):
+        return self.upvotes - self.downvotes
 
     def __str__(self):
         return f'Comment by {self.author} on {self.post.title}'

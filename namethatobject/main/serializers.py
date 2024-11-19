@@ -8,7 +8,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'email']  # Make sure 'password' and 'email' are included
+        fields = ['id', 'username', 'password', 'email']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -19,6 +19,14 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return user
 
+class PostSerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'author', 'points', 'upvotes', 'downvotes']
+
+
 class CommentSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     replies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
@@ -26,11 +34,4 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'text', 'created_at', 'author', 'parent', 'replies']
-
-class PostSerializer(serializers.ModelSerializer):
-    author = UserSerializer(read_only=True)  # Use UserSerializer for detailed author info
-
-    class Meta:
-        model = Post
-        fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'author']
+        fields = ['id', 'post', 'text', 'created_at', 'author', 'parent', 'replies', 'points', 'upvotes', 'downvotes']

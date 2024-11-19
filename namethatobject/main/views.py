@@ -5,16 +5,15 @@ from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.decorators import action
 from .models import Post, Comment, UserProfile
 from .forms import CommentForm
 from .serializers import PostSerializer, CommentSerializer, UserSerializer
 
-# Basic view for listing posts
 def post_list(request):
     posts = Post.objects.all()
     return render(request, 'main/post_list.html', {'posts': posts})
 
-# Basic view for post details, including comments
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     comments = post.comments.all()
@@ -35,27 +34,52 @@ def post_detail(request, post_id):
         'form': form
     })
 
-# API ViewSet for managing posts
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # Allow read-only access to unauthenticated users
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        # Automatically assign the logged-in user as the author
         serializer.save(author=self.request.user)
 
-# API ViewSet for managing comments
+    @action(detail=True, methods=['post'])
+    def upvote(self, request, pk=None):
+        post = self.get_object()
+        post.upvotes += 1
+        post.save()
+        return Response({'points': post.points, 'upvotes': post.upvotes, 'downvotes': post.downvotes}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def downvote(self, request, pk=None):
+        post = self.get_object()
+        post.downvotes += 1
+        post.save()
+        return Response({'points': post.points, 'upvotes': post.upvotes, 'downvotes': post.downvotes}, status=status.HTTP_200_OK)
+
+
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # Allow read-only access to unauthenticated users
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        # Automatically assign the logged-in user as the author
         serializer.save(author=self.request.user)
 
-# API View for user sign-up
+    @action(detail=True, methods=['post'])
+    def upvote(self, request, pk=None):
+        comment = self.get_object()
+        comment.upvotes += 1
+        comment.save()
+        return Response({'points': comment.points, 'upvotes': comment.upvotes, 'downvotes': comment.downvotes}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def downvote(self, request, pk=None):
+        comment = self.get_object()
+        comment.downvotes += 1
+        comment.save()
+        return Response({'points': comment.points, 'upvotes': comment.upvotes, 'downvotes': comment.downvotes}, status=status.HTTP_200_OK)
+
+
 class SignUpView(APIView):
     permission_classes = []
 
@@ -70,7 +94,6 @@ class SignUpView(APIView):
             "token": token.key
         }, status=status.HTTP_201_CREATED)
 
-# API View for retrieving the user profile
 class UserProfileView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -80,6 +103,5 @@ class UserProfileView(generics.RetrieveAPIView):
             "id": user.id,
             "username": user.username,
             "email": user.email,
-            # You can extend this with additional info like posts, comments, etc.
         }
         return Response(user_data, status=status.HTTP_200_OK)

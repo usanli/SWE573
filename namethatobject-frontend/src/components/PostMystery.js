@@ -33,7 +33,7 @@ const PostMystery = () => {
           payload,
           {
             headers: {
-              Authorization: "Bearer hf_VEKLzTxRJABCmJIhklGWXqMqLCGnIryal!j!",
+              Authorization: "Bearer hf_VEKLzTxRJABCmJIhklGWXqMqLCGnIryaljumut",
               "Content-Type": "application/json"
             }
           }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
@@ -24,13 +24,15 @@ const MysteryDetail = () => {
         setMystery(mysteryResponse.data);
 
         const commentsResponse = await axios.get(`${API_BASE_URL}/comments/`);
-        const postComments = commentsResponse.data.filter(comment => comment.post === parseInt(id));
+        const postComments = commentsResponse.data.filter(
+          (comment) => comment.post === parseInt(id)
+        );
 
         const structuredComments = postComments.reduce((acc, comment) => {
           if (!comment.parent) {
             acc.push({ ...comment, replies: [] });
           } else {
-            const parentComment = acc.find(c => c.id === comment.parent);
+            const parentComment = acc.find((c) => c.id === comment.parent);
             if (parentComment) {
               parentComment.replies.push(comment);
             }
@@ -47,10 +49,28 @@ const MysteryDetail = () => {
     fetchData();
   }, [id]);
 
+  const handleVote = async (voteType) => {
+    if (!isLoggedIn || !token) return;
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/posts/${id}/${voteType}/`,
+        {},
+        { headers: { Authorization: `Token ${token}` } }
+      );
+      setMystery({ ...mystery, ...response.data });
+    } catch (error) {
+      console.error(`Error submitting ${voteType}:`, error);
+    }
+  };
+
   const handleMarkSolved = async () => {
     if (!mystery) return;
 
-    const updatedTags = [...(mystery.tags || []), { name: 'Mystery Solved!', description: 'Mystery is solved', wikidata_id: 'no_id' }];
+    const updatedTags = [
+      ...(mystery.tags || []),
+      { name: 'Mystery Solved!', description: 'Mystery is solved', wikidata_id: 'no_id' },
+    ];
     try {
       await axios.patch(
         `${API_BASE_URL}/posts/${id}/`,
@@ -70,7 +90,7 @@ const MysteryDetail = () => {
     try {
       const response = await axios.post(
         `${API_BASE_URL}/comments/`,
-        { post: id, text: newComment, parent: "" },
+        { post: id, text: newComment, parent: null },
         { headers: { Authorization: `Token ${token}` } }
       );
 
@@ -92,7 +112,7 @@ const MysteryDetail = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      const updatedComments = comments.map(comment => {
+      const updatedComments = comments.map((comment) => {
         if (comment.id === parentId) {
           return { ...comment, replies: [...comment.replies, response.data] };
         }
@@ -107,27 +127,28 @@ const MysteryDetail = () => {
     }
   };
 
-  const renderTags = () => (
+  const renderTags = () =>
     mystery?.tags && mystery.tags.length > 0 && (
       <div style={{ marginTop: '20px' }}>
         <h5>Tags:</h5>
         <ul style={{ padding: 0, listStyle: 'none' }}>
           {mystery.tags.map((tag, index) => (
             <li key={index} style={{ display: 'inline', marginRight: '10px' }}>
-              <span style={{
-                padding: '5px 10px',
-                borderRadius: '5px',
-                backgroundColor: '#6c757d',
-                color: '#fff'
-              }}>
+              <span
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '5px',
+                  backgroundColor: tag.name === 'Mystery Solved!' ? '#28a745' : '#6c757d',
+                  color: '#fff',
+                }}
+              >
                 {tag.name}
               </span>
             </li>
           ))}
         </ul>
       </div>
-    )
-  );
+    );
 
   const openModal = (media) => {
     setSelectedMedia(media);
@@ -143,7 +164,7 @@ const MysteryDetail = () => {
     return <p>Loading...</p>;
   }
 
-  const isSolved = mystery.tags?.some(tag => tag.name === 'Mystery Solved!');
+  const isSolved = mystery.tags?.some((tag) => tag.name === 'Mystery Solved!');
 
   return (
     <div
@@ -154,28 +175,57 @@ const MysteryDetail = () => {
         padding: '15px',
       }}
     >
-      <h1 className="text-center mb-4">{mystery.title}</h1>
-
-      {/* Mystery Solved Button */}
-      {isLoggedIn && username === mystery.author?.username && !isSolved && (
-        <div className="text-center mb-4">
-          <button
-            className="btn btn-success"
-            onClick={handleMarkSolved}
+      <div className="d-flex align-items-center">
+        {/* Voting Section */}
+        {isLoggedIn && (
+          <div
+            className="d-flex flex-column align-items-center me-3"
+            style={{
+              position: 'relative',
+              marginLeft: '-50px', // Fixed to leftmost side
+            }}
           >
-            Mystery Solved
-          </button>
-        </div>
-      )}
+            <span
+              className="text-success"
+              style={{ fontSize: '24px', cursor: 'pointer' }}
+              onClick={() => handleVote('upvote')}
+            >
+              ▲
+            </span>
+            <span
+              style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                margin: '4px 0',
+                color: 'var(--primary-text-gray)',
+              }}
+            >
+              {mystery.upvotes - mystery.downvotes}
+            </span>
+            <span
+              className="text-danger"
+              style={{ fontSize: '24px', cursor: 'pointer' }}
+              onClick={() => handleVote('downvote')}
+            >
+              ▼
+            </span>
+          </div>
+        )}
 
-      <div className="text-center mb-4">
-        <p><strong>Posted by:</strong> {mystery.author?.username || 'Anonymous'}</p>
-        <p><strong>Created on:</strong> {new Date(mystery.created_at).toLocaleString()}</p>
+        {/* Title */}
+        <h1 className="text-center mb-4">{mystery.title}</h1>
       </div>
 
+      {/* Media Section */}
       {mystery.image && (
         <div
-          onClick={() => openModal(mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`)}
+          onClick={() =>
+            openModal(
+              mystery.image.startsWith('http')
+                ? mystery.image
+                : `${API_BASE_URL}${mystery.image}`
+            )
+          }
           style={{
             cursor: 'pointer',
             overflow: 'hidden',
@@ -186,14 +236,18 @@ const MysteryDetail = () => {
           }}
         >
           <img
-            src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`}
+            src={
+              mystery.image.startsWith('http')
+                ? mystery.image
+                : `${API_BASE_URL}${mystery.image}`
+            }
             alt={mystery.title}
             style={{
               width: '100%',
               maxWidth: '500px',
               height: '300px',
               objectFit: 'cover',
-              borderRadius: '8px'
+              borderRadius: '8px',
             }}
           />
         </div>
@@ -202,13 +256,16 @@ const MysteryDetail = () => {
       {renderTags()}
       <p>{mystery.description}</p>
 
+      {/* Comments Section */}
       <div className="comments-section mt-5">
         <h3>Comments</h3>
         <ul className="list-group">
-          {comments.map(comment => (
+          {comments.map((comment) => (
             <li key={comment.id} className="list-group-item">
               <strong>{comment.author?.username || 'Anonymous'}</strong>: {comment.text}
-              
+              <p style={{ fontSize: '0.9rem', color: '#888' }}>
+                Posted on: {new Date(comment.created_at).toLocaleString()}
+              </p>
               {!isSolved && isLoggedIn && (
                 <button
                   className="btn btn-link btn-sm"
@@ -221,9 +278,12 @@ const MysteryDetail = () => {
 
               {comment.replies && comment.replies.length > 0 && (
                 <ul className="list-group mt-2">
-                  {comment.replies.map(reply => (
+                  {comment.replies.map((reply) => (
                     <li key={reply.id} className="list-group-item">
                       <strong>{reply.author?.username || 'Anonymous'}</strong>: {reply.text}
+                      <p style={{ fontSize: '0.9rem', color: '#888' }}>
+                        Posted on: {new Date(reply.created_at).toLocaleString()}
+                      </p>
                     </li>
                   ))}
                 </ul>
@@ -239,7 +299,9 @@ const MysteryDetail = () => {
                     required
                     style={{ marginTop: '10px', marginBottom: '10px' }}
                   />
-                  <button type="submit" className="btn btn-secondary btn-sm">Submit Reply</button>
+                  <button type="submit" className="btn btn-secondary btn-sm">
+                    Submit Reply
+                  </button>
                 </form>
               )}
             </li>
@@ -258,7 +320,9 @@ const MysteryDetail = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary mt-2">Submit Comment</button>
+            <button type="submit" className="btn btn-primary mt-2">
+              Submit Comment
+            </button>
           </form>
         ) : (
           isSolved && <p className="mt-4 text-center text-danger">Comments are disabled for solved mysteries.</p>
@@ -277,7 +341,7 @@ const MysteryDetail = () => {
             padding: '20px',
             backgroundColor: 'white',
             borderRadius: '10px',
-          }
+          },
         }}
       >
         <button
@@ -289,7 +353,7 @@ const MysteryDetail = () => {
             position: 'absolute',
             top: '10px',
             right: '10px',
-            cursor: 'pointer'
+            cursor: 'pointer',
           }}
         >
           Close
