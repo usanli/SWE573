@@ -212,8 +212,22 @@ const MysteryDetail = () => {
           </div>
         )}
 
-        {/* Title */}
-        <h1 className="text-center mb-4">{mystery.title}</h1>
+        {/* Title Section */}
+        <div className="title-section">
+          <h1 className="text-center">{mystery.title}</h1>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '10px' }}>
+            {!isSolved && isLoggedIn && (
+              <button
+                className="btn btn-success"
+                style={{ position: 'relative' }}
+                onClick={handleMarkSolved}
+              >
+                Mystery Solved!
+              </button>
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* Media Section */}
