@@ -9,6 +9,7 @@ const MysteryDetail = () => {
   const [mystery, setMystery] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+  const [newCommentTag, setNewCommentTag] = useState("Question"); // Default to "Question"
   const [replyCommentId, setReplyCommentId] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -123,16 +124,18 @@ const MysteryDetail = () => {
     try {
       const response = await axios.post(
         `${API_BASE_URL}/comments/`,
-        { post: id, text: newComment, parent: null },
+        { post: id, text: newComment, parent: null, tag: newCommentTag },
         { headers: { Authorization: `Token ${token}` } }
       );
 
       setComments([...comments, { ...response.data, replies: [] }]);
       setNewComment("");
+      setNewCommentTag("Question"); // Reset to default
     } catch (error) {
       console.error("Error posting comment:", error);
     }
   };
+
 
   const handleReplySubmit = async (e, parentId) => {
     e.preventDefault();
@@ -310,133 +313,177 @@ const MysteryDetail = () => {
       {renderTags()}
       <p>{mystery.description}</p>
 
-      {/* Comments Section */}
-      <div className="comments-section mt-5">
-        <h3>Comments</h3>
-        <ul className="list-group">
-          {comments.map((comment) => (
-            <li key={comment.id} className="list-group-item">
-              <strong>{comment.author?.username || "Anonymous"}</strong>:{" "}
-              {comment.text}
-              <p style={{ fontSize: "0.9rem", color: "#888" }}>
-                Posted on: {new Date(comment.created_at).toLocaleString()}
-              </p>
-              <div className="d-flex align-items-center">
+{/* Comments Section */}
+<div className="comments-section mt-5">
+  <h3>Comments</h3>
+  <ul className="list-group">
+    {comments.map((comment) => (
+      <li key={comment.id} className="list-group-item">
+        <strong>{comment.author?.username || "Anonymous"}</strong>: {comment.text}
+        <span
+          className="badge ms-2"
+          style={{
+            backgroundColor:
+              comment.tag === "Question"
+                ? "#007bff" // Blue
+                : comment.tag === "Hint"
+                ? "#ffc107" // Yellow
+                : comment.tag === "Expert Answer"
+                ? "#28a745" // Green
+                : "#6c757d", // Default Gray
+            color: "#fff",
+            padding: "5px 10px",
+            borderRadius: "5px",
+            fontSize: "0.9rem",
+          }}
+        >
+          {comment.tag}
+        </span>
+        <p style={{ fontSize: "0.9rem", color: "#888" }}>
+          Posted on: {new Date(comment.created_at).toLocaleString()}
+        </p>
+        <div className="d-flex align-items-center">
+          <span
+            className="text-success"
+            style={{
+              fontSize: "18px",
+              cursor: "pointer",
+              marginRight: "10px",
+            }}
+            onClick={() => handleCommentVote(comment.id, "upvote")}
+          >
+            ▲
+          </span>
+          <span style={{ marginRight: "10px" }}>
+            {comment.upvotes - comment.downvotes}
+          </span>
+          <span
+            className="text-danger"
+            style={{ fontSize: "18px", cursor: "pointer" }}
+            onClick={() => handleCommentVote(comment.id, "downvote")}
+          >
+            ▼
+          </span>
+        </div>
+        {!isSolved && isLoggedIn && (
+          <button
+            className="btn btn-link btn-sm"
+            onClick={() => setReplyCommentId(comment.id)}
+            style={{ marginLeft: "10px", color: "#007bff" }}
+          >
+            Reply
+          </button>
+        )}
+        {comment.replies && comment.replies.length > 0 && (
+          <ul className="list-group mt-2">
+            {comment.replies.map((reply) => (
+              <li key={reply.id} className="list-group-item">
+                <strong>{reply.author?.username || "Anonymous"}</strong>:{" "}
+                {reply.text}
                 <span
-                  className="text-success"
+                  className="badge ms-2"
                   style={{
-                    fontSize: "18px",
-                    cursor: "pointer",
-                    marginRight: "10px",
+                    backgroundColor:
+                      reply.tag === "Question"
+                        ? "#007bff" // Blue
+                        : reply.tag === "Hint"
+                        ? "#ffc107" // Yellow
+                        : reply.tag === "Expert Answer"
+                        ? "#28a745" // Green
+                        : "#6c757d", // Default Gray
+                    color: "#fff",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                    fontSize: "0.9rem",
                   }}
-                  onClick={() => handleCommentVote(comment.id, "upvote")}
                 >
-                  ▲
+                  {reply.tag}
                 </span>
-                <span style={{ marginRight: "10px" }}>
-                  {comment.upvotes - comment.downvotes}
-                </span>
-                <span
-                  className="text-danger"
-                  style={{ fontSize: "18px", cursor: "pointer" }}
-                  onClick={() => handleCommentVote(comment.id, "downvote")}
-                >
-                  ▼
-                </span>
-              </div>
-              {!isSolved && isLoggedIn && (
-                <button
-                  className="btn btn-link btn-sm"
-                  onClick={() => setReplyCommentId(comment.id)}
-                  style={{ marginLeft: "10px", color: "#007bff" }}
-                >
-                  Reply
-                </button>
-              )}
-              {comment.replies && comment.replies.length > 0 && (
-                <ul className="list-group mt-2">
-                  {comment.replies.map((reply) => (
-                    <li key={reply.id} className="list-group-item">
-                      <strong>{reply.author?.username || "Anonymous"}</strong>:{" "}
-                      {reply.text}
-                      <p style={{ fontSize: "0.9rem", color: "#888" }}>
-                        Posted on: {new Date(reply.created_at).toLocaleString()}
-                      </p>
-                      <div className="d-flex align-items-center">
-                        <span
-                          className="text-success"
-                          style={{
-                            fontSize: "18px",
-                            cursor: "pointer",
-                            marginRight: "10px",
-                          }}
-                          onClick={() => handleCommentVote(reply.id, "upvote")}
-                        >
-                          ▲
-                        </span>
-                        <span style={{ marginRight: "10px" }}>
-                          {reply.upvotes - reply.downvotes}
-                        </span>
-                        <span
-                          className="text-danger"
-                          style={{ fontSize: "18px", cursor: "pointer" }}
-                          onClick={() =>
-                            handleCommentVote(reply.id, "downvote")
-                          }
-                        >
-                          ▼
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!isSolved && isLoggedIn && replyCommentId === comment.id && (
-                <form
-                  onSubmit={(e) => handleReplySubmit(e, comment.id)}
-                  className="mt-2"
-                >
-                  <textarea
-                    className="form-control"
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Write a reply..."
-                    required
-                    style={{ marginTop: "10px", marginBottom: "10px" }}
-                  />
-                  <button type="submit" className="btn btn-secondary btn-sm">
-                    Submit Reply
-                  </button>
-                </form>
-              )}
-            </li>
-          ))}
-        </ul>
-
-        {!isSolved && isLoggedIn ? (
-          <form onSubmit={handleCommentSubmit} className="mt-4">
-            <div className="form-group">
-              <label htmlFor="newComment">Add a comment:</label>
-              <textarea
-                id="newComment"
-                className="form-control"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary mt-2">
-              Submit Comment
+                <p style={{ fontSize: "0.9rem", color: "#888" }}>
+                  Posted on: {new Date(reply.created_at).toLocaleString()}
+                </p>
+                <div className="d-flex align-items-center">
+                  <span
+                    className="text-success"
+                    style={{
+                      fontSize: "18px",
+                      cursor: "pointer",
+                      marginRight: "10px",
+                    }}
+                    onClick={() => handleCommentVote(reply.id, "upvote")}
+                  >
+                    ▲
+                  </span>
+                  <span style={{ marginRight: "10px" }}>
+                    {reply.upvotes - reply.downvotes}
+                  </span>
+                  <span
+                    className="text-danger"
+                    style={{ fontSize: "18px", cursor: "pointer" }}
+                    onClick={() =>
+                      handleCommentVote(reply.id, "downvote")
+                    }
+                  >
+                    ▼
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!isSolved && isLoggedIn && replyCommentId === comment.id && (
+          <form
+            onSubmit={(e) => handleReplySubmit(e, comment.id)}
+            className="mt-2"
+          >
+            <textarea
+              className="form-control"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a reply..."
+              required
+              style={{ marginTop: "10px", marginBottom: "10px" }}
+            />
+            <button type="submit" className="btn btn-secondary btn-sm">
+              Submit Reply
             </button>
           </form>
-        ) : (
-          isSolved && (
-            <p className="mt-4 text-center text-danger">
-              Comments are disabled for solved mysteries.
-            </p>
-          )
         )}
-      </div>
+      </li>
+    ))}
+  </ul>
+
+  {!isSolved && isLoggedIn ? (
+    <form onSubmit={handleCommentSubmit} className="mt-4">
+      <textarea
+        className="form-control"
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+        placeholder="Write a comment..."
+        required
+      />
+      <select
+        className="form-select mt-2"
+        value={newCommentTag}
+        onChange={(e) => setNewCommentTag(e.target.value)}
+      >
+        <option value="Question">Question</option>
+        <option value="Hint">Hint</option>
+        <option value="Expert Answer">Expert Answer</option>
+      </select>
+      <button type="submit" className="btn btn-primary mt-2">
+        Submit Comment
+      </button>
+    </form>
+  ) : (
+    isSolved && (
+      <p className="mt-4 text-center text-danger">
+        Comments are disabled for solved mysteries.
+      </p>
+    )
+  )}
+</div>
+
 
       <Modal
         isOpen={modalIsOpen}

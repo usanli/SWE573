@@ -63,6 +63,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
+        # Save the comment with the associated user
         serializer.save(author=self.request.user)
 
     @action(detail=True, methods=['post'])
@@ -70,14 +71,31 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment = self.get_object()
         comment.upvotes += 1
         comment.save()
-        return Response({'points': comment.points, 'upvotes': comment.upvotes, 'downvotes': comment.downvotes}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'points': comment.points,
+                'upvotes': comment.upvotes,
+                'downvotes': comment.downvotes,
+                'tag': comment.tag  # Include the tag in the response
+            },
+            status=status.HTTP_200_OK
+        )
 
     @action(detail=True, methods=['post'])
     def downvote(self, request, pk=None):
         comment = self.get_object()
         comment.downvotes += 1
         comment.save()
-        return Response({'points': comment.points, 'upvotes': comment.upvotes, 'downvotes': comment.downvotes}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                'points': comment.points,
+                'upvotes': comment.upvotes,
+                'downvotes': comment.downvotes,
+                'tag': comment.tag  # Include the tag in the response
+            },
+            status=status.HTTP_200_OK
+        )
+
 
 
 class SignUpView(APIView):

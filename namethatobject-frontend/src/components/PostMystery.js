@@ -104,7 +104,7 @@ const PostMystery = () => {
           payload,
           {
             headers: {
-              Authorization: "Bearer ",
+              Authorization: "Bearer",
               "Content-Type": "application/json"
             }
           }

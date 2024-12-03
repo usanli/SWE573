@@ -22,6 +22,12 @@ class Post(models.Model):
 
 
 class Comment(models.Model):
+    TAG_CHOICES = [
+        ("Question", "Question"),
+        ("Hint", "Hint"),
+        ("Expert Answer", "Expert Answer"),
+    ]
+
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -29,6 +35,7 @@ class Comment(models.Model):
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
     upvotes = models.IntegerField(default=0)
     downvotes = models.IntegerField(default=0)
+    tag = models.CharField(max_length=20, choices=TAG_CHOICES, default="Question")  # New field
 
     @property
     def points(self):
