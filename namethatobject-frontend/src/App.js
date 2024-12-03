@@ -10,6 +10,8 @@ import Signup from './components/Signup';
 import Signin from './components/Signin';
 import Profile from './components/Profile';
 import PostMystery from './components/PostMystery';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');

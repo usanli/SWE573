@@ -1,21 +1,21 @@
-﻿import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
-import Modal from 'react-modal';
+﻿import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
+import { API_BASE_URL } from "../config";
+import Modal from "react-modal";
 
 const MysteryDetail = () => {
   const { id } = useParams();
   const [mystery, setMystery] = useState(null);
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [replyCommentId, setReplyCommentId] = useState(null);
-  const [replyText, setReplyText] = useState('');
+  const [replyText, setReplyText] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
-  const token = localStorage.getItem('token');
-  const username = JSON.parse(localStorage.getItem('userData'))?.username;
+  const [selectedMedia, setSelectedMedia] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
+  const token = localStorage.getItem("token");
+  const username = JSON.parse(localStorage.getItem("userData"))?.username;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +42,7 @@ const MysteryDetail = () => {
 
         setComments(structuredComments);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       }
     };
 
@@ -64,12 +64,45 @@ const MysteryDetail = () => {
     }
   };
 
+  const handleCommentVote = async (commentId, voteType) => {
+    if (!isLoggedIn || !token) return;
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/comments/${commentId}/${voteType}/`,
+        {},
+        { headers: { Authorization: `Token ${token}` } }
+      );
+
+      // Update the comments state with the new upvote/downvote data
+      const updatedComments = comments.map((comment) => {
+        if (comment.id === commentId) {
+          return { ...comment, ...response.data }; // Update the comment
+        }
+        if (comment.replies) {
+          comment.replies = comment.replies.map((reply) =>
+            reply.id === commentId ? { ...reply, ...response.data } : reply
+          );
+        }
+        return comment;
+      });
+
+      setComments(updatedComments);
+    } catch (error) {
+      console.error(`Error submitting ${voteType} for comment:`, error);
+    }
+  };
+
   const handleMarkSolved = async () => {
     if (!mystery) return;
 
     const updatedTags = [
       ...(mystery.tags || []),
-      { name: 'Mystery Solved!', description: 'Mystery is solved', wikidata_id: 'no_id' },
+      {
+        name: "Mystery Solved!",
+        description: "Mystery is solved",
+        wikidata_id: "no_id",
+      },
     ];
     try {
       await axios.patch(
@@ -79,7 +112,7 @@ const MysteryDetail = () => {
       );
       setMystery({ ...mystery, tags: updatedTags });
     } catch (error) {
-      console.error('Error marking mystery as solved:', error);
+      console.error("Error marking mystery as solved:", error);
     }
   };
 
@@ -95,9 +128,9 @@ const MysteryDetail = () => {
       );
 
       setComments([...comments, { ...response.data, replies: [] }]);
-      setNewComment('');
+      setNewComment("");
     } catch (error) {
-      console.error('Error posting comment:', error);
+      console.error("Error posting comment:", error);
     }
   };
 
@@ -120,26 +153,28 @@ const MysteryDetail = () => {
       });
 
       setComments(updatedComments);
-      setReplyText('');
+      setReplyText("");
       setReplyCommentId(null);
     } catch (error) {
-      console.error('Error posting reply:', error);
+      console.error("Error posting reply:", error);
     }
   };
 
   const renderTags = () =>
-    mystery?.tags && mystery.tags.length > 0 && (
-      <div style={{ marginTop: '20px' }}>
+    mystery?.tags &&
+    mystery.tags.length > 0 && (
+      <div style={{ marginTop: "20px" }}>
         <h5>Tags:</h5>
-        <ul style={{ padding: 0, listStyle: 'none' }}>
+        <ul style={{ padding: 0, listStyle: "none" }}>
           {mystery.tags.map((tag, index) => (
-            <li key={index} style={{ display: 'inline', marginRight: '10px' }}>
+            <li key={index} style={{ display: "inline", marginRight: "10px" }}>
               <span
                 style={{
-                  padding: '5px 10px',
-                  borderRadius: '5px',
-                  backgroundColor: tag.name === 'Mystery Solved!' ? '#28a745' : '#6c757d',
-                  color: '#fff',
+                  padding: "5px 10px",
+                  borderRadius: "5px",
+                  backgroundColor:
+                    tag.name === "Mystery Solved!" ? "#28a745" : "#6c757d",
+                  color: "#fff",
                 }}
               >
                 {tag.name}
@@ -157,22 +192,22 @@ const MysteryDetail = () => {
 
   const closeModal = () => {
     setModalIsOpen(false);
-    setSelectedMedia('');
+    setSelectedMedia("");
   };
 
   if (!mystery) {
     return <p>Loading...</p>;
   }
 
-  const isSolved = mystery.tags?.some((tag) => tag.name === 'Mystery Solved!');
+  const isSolved = mystery.tags?.some((tag) => tag.name === "Mystery Solved!");
 
   return (
     <div
       className="container mt-4"
       style={{
-        border: isSolved ? '4px solid #28a745' : 'none',
-        borderRadius: '10px',
-        padding: '15px',
+        border: isSolved ? "4px solid #28a745" : "none",
+        borderRadius: "10px",
+        padding: "15px",
       }}
     >
       <div className="d-flex align-items-center">
@@ -181,31 +216,31 @@ const MysteryDetail = () => {
           <div
             className="d-flex flex-column align-items-center me-3"
             style={{
-              position: 'relative',
-              marginLeft: '-50px', // Fixed to leftmost side
+              position: "relative",
+              marginLeft: "-50px", // Fixed to leftmost side
             }}
           >
             <span
               className="text-success"
-              style={{ fontSize: '24px', cursor: 'pointer' }}
-              onClick={() => handleVote('upvote')}
+              style={{ fontSize: "24px", cursor: "pointer" }}
+              onClick={() => handleVote("upvote")}
             >
               ▲
             </span>
             <span
               style={{
-                fontSize: '16px',
-                fontWeight: 'bold',
-                margin: '4px 0',
-                color: 'var(--primary-text-gray)',
+                fontSize: "16px",
+                fontWeight: "bold",
+                margin: "4px 0",
+                color: "var(--primary-text-gray)",
               }}
             >
               {mystery.upvotes - mystery.downvotes}
             </span>
             <span
               className="text-danger"
-              style={{ fontSize: '24px', cursor: 'pointer' }}
-              onClick={() => handleVote('downvote')}
+              style={{ fontSize: "24px", cursor: "pointer" }}
+              onClick={() => handleVote("downvote")}
             >
               ▼
             </span>
@@ -215,11 +250,17 @@ const MysteryDetail = () => {
         {/* Title Section */}
         <div className="title-section">
           <h1 className="text-center">{mystery.title}</h1>
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '10px' }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              marginTop: "10px",
+            }}
+          >
             {!isSolved && isLoggedIn && (
               <button
                 className="btn btn-success"
-                style={{ position: 'relative' }}
+                style={{ position: "relative" }}
                 onClick={handleMarkSolved}
               >
                 Mystery Solved!
@@ -227,7 +268,6 @@ const MysteryDetail = () => {
             )}
           </div>
         </div>
-
       </div>
 
       {/* Media Section */}
@@ -235,33 +275,33 @@ const MysteryDetail = () => {
         <div
           onClick={() =>
             openModal(
-              mystery.image.startsWith('http')
+              mystery.image.startsWith("http")
                 ? mystery.image
                 : `${API_BASE_URL}${mystery.image}`
             )
           }
           style={{
-            cursor: 'pointer',
-            overflow: 'hidden',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            display: 'flex',
-            justifyContent: 'center',
+            cursor: "pointer",
+            overflow: "hidden",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            display: "flex",
+            justifyContent: "center",
           }}
         >
           <img
             src={
-              mystery.image.startsWith('http')
+              mystery.image.startsWith("http")
                 ? mystery.image
                 : `${API_BASE_URL}${mystery.image}`
             }
             alt={mystery.title}
             style={{
-              width: '100%',
-              maxWidth: '500px',
-              height: '300px',
-              objectFit: 'cover',
-              borderRadius: '8px',
+              width: "100%",
+              maxWidth: "500px",
+              height: "300px",
+              objectFit: "cover",
+              borderRadius: "8px",
             }}
           />
         </div>
@@ -276,42 +316,93 @@ const MysteryDetail = () => {
         <ul className="list-group">
           {comments.map((comment) => (
             <li key={comment.id} className="list-group-item">
-              <strong>{comment.author?.username || 'Anonymous'}</strong>: {comment.text}
-              <p style={{ fontSize: '0.9rem', color: '#888' }}>
+              <strong>{comment.author?.username || "Anonymous"}</strong>:{" "}
+              {comment.text}
+              <p style={{ fontSize: "0.9rem", color: "#888" }}>
                 Posted on: {new Date(comment.created_at).toLocaleString()}
               </p>
+              <div className="d-flex align-items-center">
+                <span
+                  className="text-success"
+                  style={{
+                    fontSize: "18px",
+                    cursor: "pointer",
+                    marginRight: "10px",
+                  }}
+                  onClick={() => handleCommentVote(comment.id, "upvote")}
+                >
+                  ▲
+                </span>
+                <span style={{ marginRight: "10px" }}>
+                  {comment.upvotes - comment.downvotes}
+                </span>
+                <span
+                  className="text-danger"
+                  style={{ fontSize: "18px", cursor: "pointer" }}
+                  onClick={() => handleCommentVote(comment.id, "downvote")}
+                >
+                  ▼
+                </span>
+              </div>
               {!isSolved && isLoggedIn && (
                 <button
                   className="btn btn-link btn-sm"
                   onClick={() => setReplyCommentId(comment.id)}
-                  style={{ marginLeft: '10px', color: '#007bff' }}
+                  style={{ marginLeft: "10px", color: "#007bff" }}
                 >
                   Reply
                 </button>
               )}
-
               {comment.replies && comment.replies.length > 0 && (
                 <ul className="list-group mt-2">
                   {comment.replies.map((reply) => (
                     <li key={reply.id} className="list-group-item">
-                      <strong>{reply.author?.username || 'Anonymous'}</strong>: {reply.text}
-                      <p style={{ fontSize: '0.9rem', color: '#888' }}>
+                      <strong>{reply.author?.username || "Anonymous"}</strong>:{" "}
+                      {reply.text}
+                      <p style={{ fontSize: "0.9rem", color: "#888" }}>
                         Posted on: {new Date(reply.created_at).toLocaleString()}
                       </p>
+                      <div className="d-flex align-items-center">
+                        <span
+                          className="text-success"
+                          style={{
+                            fontSize: "18px",
+                            cursor: "pointer",
+                            marginRight: "10px",
+                          }}
+                          onClick={() => handleCommentVote(reply.id, "upvote")}
+                        >
+                          ▲
+                        </span>
+                        <span style={{ marginRight: "10px" }}>
+                          {reply.upvotes - reply.downvotes}
+                        </span>
+                        <span
+                          className="text-danger"
+                          style={{ fontSize: "18px", cursor: "pointer" }}
+                          onClick={() =>
+                            handleCommentVote(reply.id, "downvote")
+                          }
+                        >
+                          ▼
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>
               )}
-
               {!isSolved && isLoggedIn && replyCommentId === comment.id && (
-                <form onSubmit={(e) => handleReplySubmit(e, comment.id)} className="mt-2">
+                <form
+                  onSubmit={(e) => handleReplySubmit(e, comment.id)}
+                  className="mt-2"
+                >
                   <textarea
                     className="form-control"
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="Write a reply..."
                     required
-                    style={{ marginTop: '10px', marginBottom: '10px' }}
+                    style={{ marginTop: "10px", marginBottom: "10px" }}
                   />
                   <button type="submit" className="btn btn-secondary btn-sm">
                     Submit Reply
@@ -339,7 +430,11 @@ const MysteryDetail = () => {
             </button>
           </form>
         ) : (
-          isSolved && <p className="mt-4 text-center text-danger">Comments are disabled for solved mysteries.</p>
+          isSolved && (
+            <p className="mt-4 text-center text-danger">
+              Comments are disabled for solved mysteries.
+            </p>
+          )
         )}
       </div>
 
@@ -350,37 +445,42 @@ const MysteryDetail = () => {
         ariaHideApp={false}
         style={{
           content: {
-            maxWidth: '80%',
-            margin: 'auto',
-            padding: '20px',
-            backgroundColor: 'white',
-            borderRadius: '10px',
+            maxWidth: "80%",
+            margin: "auto",
+            padding: "20px",
+            backgroundColor: "white",
+            borderRadius: "10px",
           },
         }}
       >
         <button
           onClick={closeModal}
           style={{
-            backgroundColor: 'transparent',
-            border: 'none',
-            fontSize: '20px',
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            cursor: 'pointer',
+            backgroundColor: "transparent",
+            border: "none",
+            fontSize: "20px",
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            cursor: "pointer",
           }}
         >
           Close
         </button>
         {selectedMedia && (
-          <div style={{ textAlign: 'center' }}>
-            {selectedMedia.endsWith('.mp4') || selectedMedia.endsWith('.webm') ? (
-              <video controls style={{ width: '100%', maxWidth: '100%' }}>
+          <div style={{ textAlign: "center" }}>
+            {selectedMedia.endsWith(".mp4") ||
+            selectedMedia.endsWith(".webm") ? (
+              <video controls style={{ width: "100%", maxWidth: "100%" }}>
                 <source src={selectedMedia} />
                 Your browser does not support the video tag.
               </video>
             ) : (
-              <img src={selectedMedia} alt="Full Size" style={{ width: '100%', maxWidth: '100%' }} />
+              <img
+                src={selectedMedia}
+                alt="Full Size"
+                style={{ width: "100%", maxWidth: "100%" }}
+              />
             )}
           </div>
         )}
