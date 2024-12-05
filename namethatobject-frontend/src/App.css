@@ -50,13 +50,15 @@
 
 /* index.css or App.css */
 :root {
-  --primary-blue: #007BFF;
-  --primary-blue-hover: #0056b3;
-  --background-gray: #F5F5F5;
-  --primary-text-gray: #343A40;
-  --secondary-text-gray: #6C757D;
-  --accent-yellow: #FFD700;
-  --accent-green: #28A745;
+  --primary-blue: #4a90e2;
+  --primary-blue-hover: #357abd;
+  --background-gray: #f8f9fa;
+  --primary-text-gray: #2c3e50;
+  --secondary-text-gray: #7f8c8d;
+  --accent-yellow: #f1c40f;
+  --accent-green: #27ae60;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --hover-transition: all 0.3s ease;
 }
 
 body {
@@ -103,4 +105,70 @@ a:hover {
 .badge-green {
   background-color: var(--accent-green);
   color: #ffffff;
+}
+
+/* Add smooth transitions */
+.card, .btn, .nav-link {
+  transition: var(--hover-transition);
+}
+
+/* Enhance cards */
+.card {
+  box-shadow: var(--card-shadow);
+  border: none;
+  border-radius: 12px;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhance buttons */
+.btn-primary {
+  background-color: var(--primary-blue);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-blue-hover);
+  transform: translateY(-1px);
+}
+
+/* Enhance navbar */
+.navbar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem 0;
+}
+
+/* Enhance form controls */
+.form-control {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  padding: 10px 15px;
+}
+
+.form-control:focus {
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+  border-color: var(--primary-blue);
+}
+
+/* Add loading animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Enhance footer */
+footer {
+  margin-top: auto;
+  padding: 2rem 0;
+  background-color: #2c3e50;
+  color: white;
 }

@@ -106,16 +106,34 @@ const MysteryList = ({ searchTerm }) => {
         {filteredMysteries.length > 0 ? (
           filteredMysteries.slice(0, visibleCount).map(mystery => (
             <div className="col-md-4 mb-4" key={mystery.id}>
-              <div
-                className="card h-100 position-relative"
+              <div className="card h-100 fade-in" 
                 style={{
-                  border: mystery.tags?.some(tag => tag.name === 'Mystery Solved!') ? '4px solid #28a745' : 'none',
-                  borderRadius: '10px',
+                  border: mystery.tags?.some(tag => tag.name === 'Mystery Solved!') 
+                    ? '2px solid var(--accent-green)' 
+                    : 'none',
+                  borderRadius: '15px',
+                  overflow: 'hidden'
                 }}
               >
+                <div 
+                  className="position-absolute top-0 end-0 m-2 px-2 py-1 rounded-pill"
+                  style={{ 
+                    backgroundColor: 'rgba(0,0,0,0.7)', 
+                    color: 'white',
+                    zIndex: 1
+                  }}
+                >
+                  <span className="text-success me-1">▲ {mystery.upvotes}</span>
+                  <span className="text-danger">▼ {mystery.downvotes}</span>
+                </div>
                 {mystery.image && (
-                  <div
-                    style={{ height: '200px', overflow: 'hidden', cursor: 'pointer' }}
+                  <div 
+                    style={{ 
+                      height: '200px', 
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      position: 'relative'
+                    }}
                     onClick={() => navigate(`/mystery/${mystery.id}`)}
                   >
                     <img
@@ -126,29 +144,44 @@ const MysteryList = ({ searchTerm }) => {
                         height: '100%',
                         width: '100%',
                         objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
                       }}
+                      onMouseOver={e => e.target.style.transform = 'scale(1.05)'}
+                      onMouseOut={e => e.target.style.transform = 'scale(1)'}
                     />
                   </div>
                 )}
-                <div className="card-body" style={{ minHeight: '150px' }}>
-                  <h5 className="card-title" style={{ color: 'var(--primary-blue)' }}>
-                    <Link to={`/mystery/${mystery.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="card-body d-flex flex-column">
+                  <h5 className="card-title">
+                    <Link 
+                      to={`/mystery/${mystery.id}`} 
+                      style={{ 
+                        textDecoration: 'none',
+                        color: 'var(--primary-text-gray)',
+                        fontWeight: '600'
+                      }}
+                    >
                       {mystery.title}
                     </Link>
                   </h5>
-                  <p className="card-text" style={{ color: 'var(--secondary-text-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {mystery.description}
+                  <p className="card-text text-muted">
+                    {mystery.description.length > 100 
+                      ? `${mystery.description.substring(0, 100)}...` 
+                      : mystery.description}
                   </p>
-
-                  {mystery.tags && mystery.tags.length > 0 && (
-                    <div className="tags mt-2">
+                  {mystery.tags && (
+                    <div className="tags mt-auto">
                       {mystery.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="badge me-1"
+                          className="badge me-1 mb-1"
                           style={{
-                            backgroundColor: tag.name === 'Mystery Solved!' ? '#28a745' : '#6c757d',
-                            color: '#fff'
+                            backgroundColor: tag.name === 'Mystery Solved!' 
+                              ? 'var(--accent-green)' 
+                              : 'var(--primary-blue)',
+                            padding: '6px 12px',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem'
                           }}
                         >
                           {tag.name}
@@ -157,46 +190,6 @@ const MysteryList = ({ searchTerm }) => {
                     </div>
                   )}
                 </div>
-
-                {/* Upvote and Downvote Buttons */}
-                {isLoggedIn && (
-                  <div
-                    className="d-flex flex-column align-items-center"
-                    style={{
-                      position: 'absolute',
-                      top: '5px',
-                      right: '10px',
-                      zIndex: 10,
-                    }}
-                  >
-                    <span
-                      className="text-success"
-                      style={{ fontSize: '14px', cursor: 'pointer' }}
-                      title="Upvote"
-                      onClick={() => handleVote(mystery.id, 'upvote')}
-                    >
-                      ▲
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        marginTop: '4px',
-                        marginBottom: '4px',
-                        color: 'var(--primary-text-gray)',
-                      }}
-                    >
-                      {mystery.upvotes - mystery.downvotes}
-                    </span>
-                    <span
-                      className="text-danger"
-                      style={{ fontSize: '14px', cursor: 'pointer' }}
-                      title="Downvote"
-                      onClick={() => handleVote(mystery.id, 'downvote')}
-                    >
-                      ▼
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
           ))

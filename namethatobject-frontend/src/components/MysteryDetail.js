@@ -29,19 +29,25 @@ const MysteryDetail = () => {
           (comment) => comment.post === parseInt(id)
         );
 
-        const structuredComments = postComments.reduce((acc, comment) => {
-          if (!comment.parent) {
-            acc.push({ ...comment, replies: [] });
-          } else {
-            const parentComment = acc.find((c) => c.id === comment.parent);
-            if (parentComment) {
-              parentComment.replies.push(comment);
-            }
-          }
-          return acc;
-        }, []);
+        const commentMap = new Map();
+        const topLevelComments = [];
 
-        setComments(structuredComments);
+        postComments.forEach(comment => {
+          commentMap.set(comment.id, { ...comment, replies: [] });
+        });
+
+        postComments.forEach(comment => {
+          if (comment.parent) {
+            const parentComment = commentMap.get(comment.parent);
+            if (parentComment) {
+              parentComment.replies.push(commentMap.get(comment.id));
+            }
+          } else {
+            topLevelComments.push(commentMap.get(comment.id));
+          }
+        });
+
+        setComments(topLevelComments);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -75,22 +81,24 @@ const MysteryDetail = () => {
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      // Update the comments state with the new upvote/downvote data
-      const updatedComments = comments.map((comment) => {
-        if (comment.id === commentId) {
-          return { ...comment, ...response.data }; // Update the comment
-        }
-        if (comment.replies) {
-          comment.replies = comment.replies.map((reply) =>
-            reply.id === commentId ? { ...reply, ...response.data } : reply
-          );
-        }
-        return comment;
-      });
-
-      setComments(updatedComments);
+      // Update comments state with new vote counts
+      setComments(prevComments => 
+        prevComments.map(comment => {
+          if (comment.id === commentId) {
+            return { ...comment, ...response.data };
+          }
+          // Check if the voted comment is a reply
+          if (comment.replies) {
+            const updatedReplies = comment.replies.map(reply => 
+              reply.id === commentId ? { ...reply, ...response.data } : reply
+            );
+            return { ...comment, replies: updatedReplies };
+          }
+          return comment;
+        })
+      );
     } catch (error) {
-      console.error(`Error submitting ${voteType} for comment:`, error);
+      console.error(`Error ${voteType}ing comment:`, error);
     }
   };
 
@@ -142,49 +150,70 @@ const MysteryDetail = () => {
     if (!replyText.trim()) return;
 
     try {
+      // Format the data exactly as the API expects
+      const replyData = {
+        post: id.toString(), // Convert to string as API expects
+        text: replyText.trim(),
+        parent: parentId.toString() // Convert to string as API expects
+      };
+
       const response = await axios.post(
         `${API_BASE_URL}/comments/`,
-        { post: id, text: replyText, parent: parentId },
+        replyData,
         { headers: { Authorization: `Token ${token}` } }
       );
 
-      const updatedComments = comments.map((comment) => {
-        if (comment.id === parentId) {
-          return { ...comment, replies: [...comment.replies, response.data] };
-        }
-        return comment;
-      });
+      if (response.data) {
+        setComments(prevComments => 
+          prevComments.map(comment => {
+            if (comment.id === parentId) {
+              return {
+                ...comment,
+                replies: [...(comment.replies || []), response.data]
+              };
+            }
+            return comment;
+          })
+        );
 
-      setComments(updatedComments);
-      setReplyText("");
-      setReplyCommentId(null);
+        setReplyText("");
+        setReplyCommentId(null);
+      }
     } catch (error) {
       console.error("Error posting reply:", error);
+      console.error("Error response:", error.response?.data);
+      alert("Error posting reply. Please try again.");
     }
   };
 
   const renderTags = () =>
     mystery?.tags &&
     mystery.tags.length > 0 && (
-      <div style={{ marginTop: "20px" }}>
-        <h5>Tags:</h5>
-        <ul style={{ padding: 0, listStyle: "none" }}>
+      <div className="tags-section mt-4">
+        <h5 className="mb-3">Tags:</h5>
+        <div className="d-flex flex-wrap gap-2">
           {mystery.tags.map((tag, index) => (
-            <li key={index} style={{ display: "inline", marginRight: "10px" }}>
-              <span
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: "5px",
-                  backgroundColor:
-                    tag.name === "Mystery Solved!" ? "#28a745" : "#6c757d",
-                  color: "#fff",
-                }}
-              >
-                {tag.name}
-              </span>
-            </li>
+            <span
+              key={index}
+              className="badge"
+              style={{
+                padding: "8px 12px",
+                borderRadius: "20px",
+                backgroundColor: tag.name === "Mystery Solved!" ? "var(--accent-green)" : "var(--primary-blue)",
+                color: "#fff",
+                fontSize: "0.9rem",
+                marginBottom: "5px"
+              }}
+            >
+              {tag.name}
+              {tag.description && (
+                <span className="ms-1 text-light-emphasis">
+                  ({tag.description})
+                </span>
+              )}
+            </span>
           ))}
-        </ul>
+        </div>
       </div>
     );
 
@@ -310,180 +339,315 @@ const MysteryDetail = () => {
         </div>
       )}
 
-      {renderTags()}
-      <p>{mystery.description}</p>
-
-{/* Comments Section */}
-<div className="comments-section mt-5">
-  <h3>Comments</h3>
-  <ul className="list-group">
-    {comments.map((comment) => (
-      <li key={comment.id} className="list-group-item">
-        <strong>{comment.author?.username || "Anonymous"}</strong>: {comment.text}
-        <span
-          className="badge ms-2"
-          style={{
-            backgroundColor:
-              comment.tag === "Question"
-                ? "#007bff" // Blue
-                : comment.tag === "Hint"
-                ? "#ffc107" // Yellow
-                : comment.tag === "Expert Answer"
-                ? "#28a745" // Green
-                : "#6c757d", // Default Gray
-            color: "#fff",
-            padding: "5px 10px",
-            borderRadius: "5px",
-            fontSize: "0.9rem",
-          }}
-        >
-          {comment.tag}
-        </span>
-        <p style={{ fontSize: "0.9rem", color: "#888" }}>
-          Posted on: {new Date(comment.created_at).toLocaleString()}
-        </p>
-        <div className="d-flex align-items-center">
-          <span
-            className="text-success"
-            style={{
-              fontSize: "18px",
-              cursor: "pointer",
-              marginRight: "10px",
-            }}
-            onClick={() => handleCommentVote(comment.id, "upvote")}
-          >
-            ▲
-          </span>
-          <span style={{ marginRight: "10px" }}>
-            {comment.upvotes - comment.downvotes}
-          </span>
-          <span
-            className="text-danger"
-            style={{ fontSize: "18px", cursor: "pointer" }}
-            onClick={() => handleCommentVote(comment.id, "downvote")}
-          >
-            ▼
-          </span>
-        </div>
-        {!isSolved && isLoggedIn && (
-          <button
-            className="btn btn-link btn-sm"
-            onClick={() => setReplyCommentId(comment.id)}
-            style={{ marginLeft: "10px", color: "#007bff" }}
-          >
-            Reply
-          </button>
-        )}
-        {comment.replies && comment.replies.length > 0 && (
-          <ul className="list-group mt-2">
-            {comment.replies.map((reply) => (
-              <li key={reply.id} className="list-group-item">
-                <strong>{reply.author?.username || "Anonymous"}</strong>:{" "}
-                {reply.text}
-                <span
-                  className="badge ms-2"
+      {/* Media Gallery Section */}
+      <div className="media-gallery mb-4">
+        <div className="row">
+          {/* Image */}
+          {mystery.image && (
+            <div className="col-md-6 mb-3">
+              <div className="media-item h-100">
+                <h5 className="mb-3">Image</h5>
+                <div
+                  onClick={() => openModal(
+                    mystery.image.startsWith("http")
+                      ? mystery.image
+                      : `${API_BASE_URL}${mystery.image}`,
+                    'image'
+                  )}
+                  className="media-container"
                   style={{
-                    backgroundColor:
-                      reply.tag === "Question"
-                        ? "#007bff" // Blue
-                        : reply.tag === "Hint"
-                        ? "#ffc107" // Yellow
-                        : reply.tag === "Expert Answer"
-                        ? "#28a745" // Green
-                        : "#6c757d", // Default Gray
-                    color: "#fff",
-                    padding: "5px 10px",
-                    borderRadius: "5px",
-                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    overflow: "hidden",
+                    borderRadius: "12px",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    transition: "transform 0.3s ease",
+                    maxHeight: "300px"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <img
+                    src={mystery.image.startsWith("http") ? mystery.image : `${API_BASE_URL}${mystery.image}`}
+                    alt={mystery.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Video */}
+          {mystery.video && (
+            <div className="col-md-6 mb-3">
+              <div className="media-item h-100">
+                <h5 className="mb-3">Video</h5>
+                <div
+                  className="media-container"
+                  style={{
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    maxHeight: "300px"
                   }}
                 >
-                  {reply.tag}
-                </span>
-                <p style={{ fontSize: "0.9rem", color: "#888" }}>
-                  Posted on: {new Date(reply.created_at).toLocaleString()}
-                </p>
-                <div className="d-flex align-items-center">
-                  <span
-                    className="text-success"
+                  <video
+                    controls
                     style={{
-                      fontSize: "18px",
-                      cursor: "pointer",
-                      marginRight: "10px",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      backgroundColor: "#000"
                     }}
-                    onClick={() => handleCommentVote(reply.id, "upvote")}
                   >
-                    ▲
-                  </span>
-                  <span style={{ marginRight: "10px" }}>
-                    {reply.upvotes - reply.downvotes}
-                  </span>
-                  <span
-                    className="text-danger"
-                    style={{ fontSize: "18px", cursor: "pointer" }}
-                    onClick={() =>
-                      handleCommentVote(reply.id, "downvote")
-                    }
-                  >
-                    ▼
-                  </span>
+                    <source 
+                      src={mystery.video.startsWith("http") ? mystery.video : `${API_BASE_URL}${mystery.video}`}
+                      type="video/mp4"
+                    />
+                    Your browser does not support the video tag.
+                  </video>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {!isSolved && isLoggedIn && replyCommentId === comment.id && (
-          <form
-            onSubmit={(e) => handleReplySubmit(e, comment.id)}
-            className="mt-2"
-          >
-            <textarea
-              className="form-control"
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Write a reply..."
-              required
-              style={{ marginTop: "10px", marginBottom: "10px" }}
-            />
-            <button type="submit" className="btn btn-secondary btn-sm">
-              Submit Reply
-            </button>
-          </form>
-        )}
-      </li>
-    ))}
-  </ul>
+              </div>
+            </div>
+          )}
 
-  {!isSolved && isLoggedIn ? (
-    <form onSubmit={handleCommentSubmit} className="mt-4">
-      <textarea
-        className="form-control"
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        placeholder="Write a comment..."
-        required
-      />
-      <select
-        className="form-select mt-2"
-        value={newCommentTag}
-        onChange={(e) => setNewCommentTag(e.target.value)}
-      >
-        <option value="Question">Question</option>
-        <option value="Hint">Hint</option>
-        <option value="Expert Answer">Expert Answer</option>
-      </select>
-      <button type="submit" className="btn btn-primary mt-2">
-        Submit Comment
-      </button>
-    </form>
-  ) : (
-    isSolved && (
-      <p className="mt-4 text-center text-danger">
-        Comments are disabled for solved mysteries.
-      </p>
-    )
-  )}
-</div>
+          {/* Audio */}
+          {mystery.audio && (
+            <div className="col-md-6 mb-3">
+              <div className="media-item">
+                <h5 className="mb-3">Audio</h5>
+                <div
+                  className="media-container p-3"
+                  style={{
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "12px",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                  }}
+                >
+                  <audio
+                    controls
+                    style={{ width: "100%" }}
+                  >
+                    <source 
+                      src={mystery.audio.startsWith("http") ? mystery.audio : `${API_BASE_URL}${mystery.audio}`}
+                      type="audio/mpeg"
+                    />
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
+      {/* Mystery Info Section */}
+      <div className="mystery-info mb-4">
+        <div className="row align-items-center">
+          <div className="col-md-8">
+            <h2 className="mb-3">{mystery.title}</h2>
+            <p className="text-muted">
+              Posted by {mystery.author?.username || "Anonymous"} on{" "}
+              {new Date(mystery.created_at).toLocaleDateString()}
+            </p>
+          </div>
+          <div className="col-md-4 text-md-end">
+            <div className="vote-section">
+              <div className="btn-group">
+                <button
+                  className={`btn ${isLoggedIn ? 'btn-outline-success' : 'btn-secondary'}`}
+                  onClick={() => handleVote("upvote")}
+                  disabled={!isLoggedIn}
+                >
+                  ▲ {mystery.upvotes}
+                </button>
+                <button
+                  className={`btn ${isLoggedIn ? 'btn-outline-danger' : 'btn-secondary'}`}
+                  onClick={() => handleVote("downvote")}
+                  disabled={!isLoggedIn}
+                >
+                  ▼ {mystery.downvotes}
+                </button>
+              </div>
+              {!isLoggedIn && (
+                <small className="d-block text-muted mt-2">
+                  Sign in to vote
+                </small>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {renderTags()}
+        
+        <div className="description-section mt-4">
+          <h5 className="mb-3">Description</h5>
+          <p className="lead">{mystery.description}</p>
+        </div>
+      </div>
+
+      {/* Comments Section */}
+      <div className="comments-section mt-5">
+        <h3 className="mb-4 border-bottom pb-2">Discussion</h3>
+        
+        {!isSolved && isLoggedIn && (
+          <div className="card mb-4 shadow-sm">
+            <div className="card-body">
+              <form onSubmit={handleCommentSubmit}>
+                <textarea
+                  className="form-control mb-3"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Share your thoughts..."
+                  rows="3"
+                  style={{ borderRadius: '10px' }}
+                />
+                <div className="d-flex justify-content-between align-items-center">
+                  <select
+                    className="form-select w-auto"
+                    value={newCommentTag}
+                    onChange={(e) => setNewCommentTag(e.target.value)}
+                    style={{ borderRadius: '10px' }}
+                  >
+                    <option value="Question">Question</option>
+                    <option value="Hint">Hint</option>
+                    <option value="Expert Answer">Expert Answer</option>
+                  </select>
+                  <button type="submit" className="btn btn-primary">
+                    Post Comment
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <div className="comments-list">
+          {comments.map((comment) => (
+            <div key={comment.id} className="card mb-3 shadow-sm fade-in">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 className="mb-1">{comment.author?.username || "Anonymous"}</h6>
+                    <span className={`badge ${
+                      comment.tag === "Question" ? "bg-primary" :
+                      comment.tag === "Hint" ? "bg-warning" :
+                      "bg-success"
+                    } mb-2`}>
+                      {comment.tag}
+                    </span>
+                  </div>
+                  <small className="text-muted">
+                    {new Date(comment.created_at).toLocaleDateString()}
+                  </small>
+                </div>
+                
+                <p className="mb-2">{comment.text}</p>
+                
+                <div className="d-flex align-items-center gap-3">
+                  {isLoggedIn && (
+                    <div className="btn-group">
+                      <button
+                        className="btn btn-sm btn-outline-success"
+                        onClick={() => handleCommentVote(comment.id, "upvote")}
+                      >
+                        ▲ {comment.upvotes || 0}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleCommentVote(comment.id, "downvote")}
+                      >
+                        ▼ {comment.downvotes || 0}
+                      </button>
+                    </div>
+                  )}
+                  
+                  {!isSolved && isLoggedIn && (
+                    <button
+                      className="btn btn-sm btn-link"
+                      onClick={() => setReplyCommentId(comment.id)}
+                    >
+                      Reply
+                    </button>
+                  )}
+                </div>
+
+                {/* Replies */}
+                {comment.replies && comment.replies.length > 0 && (
+                  <div className="ms-4 mt-3">
+                    {comment.replies.map((reply) => (
+                      <div key={reply.id} className="card mb-2">
+                        <div className="card-body py-2">
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div>
+                              <strong>{reply.author?.username || "Anonymous"}</strong>
+                              <p className="mb-2 mt-1">{reply.text}</p>
+                            </div>
+                            <small className="text-muted">
+                              {new Date(reply.created_at).toLocaleDateString()}
+                            </small>
+                          </div>
+                          {isLoggedIn && (
+                            <div className="d-flex align-items-center mt-2">
+                              <div className="btn-group btn-group-sm">
+                                <button
+                                  className="btn btn-outline-success btn-sm"
+                                  onClick={() => handleCommentVote(reply.id, "upvote")}
+                                >
+                                  ▲ {reply.upvotes || 0}
+                                </button>
+                                <button
+                                  className="btn btn-outline-danger btn-sm"
+                                  onClick={() => handleCommentVote(reply.id, "downvote")}
+                                >
+                                  ▼ {reply.downvotes || 0}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!isSolved && isLoggedIn && replyCommentId === comment.id && (
+                  <div className="mt-3">
+                    <form onSubmit={(e) => handleReplySubmit(e, comment.id)}>
+                      <div className="form-group">
+                        <textarea
+                          className="form-control"
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Write your reply..."
+                          rows="3"
+                          style={{ borderRadius: '10px' }}
+                          required
+                        />
+                      </div>
+                      <div className="mt-2">
+                        <button type="submit" className="btn btn-primary btn-sm me-2">
+                          Submit Reply
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn btn-outline-secondary btn-sm"
+                          onClick={() => setReplyCommentId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <Modal
         isOpen={modalIsOpen}
@@ -491,34 +655,47 @@ const MysteryDetail = () => {
         contentLabel="Media Modal"
         ariaHideApp={false}
         style={{
-          content: {
-            maxWidth: "80%",
-            margin: "auto",
-            padding: "20px",
-            backgroundColor: "white",
-            borderRadius: "10px",
+          overlay: {
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            zIndex: 1000
           },
+          content: {
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            marginRight: '-50%',
+            transform: 'translate(-50%, -50%)',
+            maxWidth: '90%',
+            maxHeight: '90%',
+            padding: '20px',
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: 'none'
+          }
         }}
       >
         <button
           onClick={closeModal}
+          className="btn btn-link position-absolute"
           style={{
-            backgroundColor: "transparent",
-            border: "none",
-            fontSize: "20px",
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            cursor: "pointer",
+            top: '10px',
+            right: '10px',
+            fontSize: '24px',
+            color: '#000',
+            textDecoration: 'none'
           }}
         >
-          Close
+          ×
         </button>
-        {selectedMedia && (
-          <div style={{ textAlign: "center" }}>
-            {selectedMedia.endsWith(".mp4") ||
-            selectedMedia.endsWith(".webm") ? (
-              <video controls style={{ width: "100%", maxWidth: "100%" }}>
+        <div className="modal-content text-center">
+          {selectedMedia && (
+            selectedMedia.endsWith('.mp4') || selectedMedia.endsWith('.webm') ? (
+              <video
+                controls
+                autoPlay
+                style={{ maxWidth: '100%', maxHeight: '80vh' }}
+              >
                 <source src={selectedMedia} />
                 Your browser does not support the video tag.
               </video>
@@ -526,11 +703,11 @@ const MysteryDetail = () => {
               <img
                 src={selectedMedia}
                 alt="Full Size"
-                style={{ width: "100%", maxWidth: "100%" }}
+                style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
               />
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
       </Modal>
     </div>
   );

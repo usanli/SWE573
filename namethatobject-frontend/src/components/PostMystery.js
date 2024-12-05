@@ -104,7 +104,7 @@ const PostMystery = () => {
           payload,
           {
             headers: {
-              Authorization: "Bearer",
+              Authorization: `Bearer ${process.env.REACT_APP_HUGGINGFACE_API_KEY}`,
               "Content-Type": "application/json"
             }
           }
@@ -169,21 +169,35 @@ const PostMystery = () => {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    formData.append(
-      'tags',
-      JSON.stringify([
-        ...selectedTags,
-        ...selectedMysteryAttributes.map((tag) => ({ name: tag })),
-        ...Object.entries(selectedIdentificationClues).flatMap(([category, clues]) =>
-          clues.map((clue) => ({
-            name: clue.name,
-            description: clue.description,
-            category,
-          }))
-        ),
-      ])
-    );
 
+    // Format all tags into a single array with proper structure
+    const allTags = [
+      // Add selected tags from tag search
+      ...selectedTags,
+      // Add selected mystery attributes with proper category as description
+      ...Object.entries(mysteryAttributes).flatMap(([category, attributes]) =>
+        selectedMysteryAttributes
+          .filter(attr => attributes.includes(attr))
+          .map(attr => ({
+            name: attr,
+            description: category, // Use the category as description
+            wikidata_id: null
+          }))
+      ),
+      // Add identification clues with their categories
+      ...Object.entries(selectedIdentificationClues).flatMap(([category, clues]) =>
+        clues.map(clue => ({
+          name: clue.name,
+          description: category,
+          wikidata_id: clue.wikidata_id || null
+        }))
+      )
+    ];
+
+    // Convert tags array to string and append to formData
+    formData.append('tags', JSON.stringify(allTags));
+
+    // Append media files if they exist
     if (image) formData.append('image', image);
     if (video) formData.append('video', video);
     if (audio) formData.append('audio', audio);
@@ -199,246 +213,276 @@ const PostMystery = () => {
       navigate(`/mystery/${response.data.id}`);
     } catch (error) {
       console.error('Error creating post:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(`Error: ${JSON.stringify(error.response.data)}`);
+      } else {
+        alert('Error creating post. Please try again.');
+      }
     }
   };
 
   return (
-    <div className="container mt-4" style={{ maxWidth: '600px' }}>
-      <h2 className="text-center">Post a Mystery</h2>
-      
-      <form onSubmit={handleSubmit}>
-        {/* Title Input Section */}
-        <div className="form-group mt-3">
-          <label htmlFor="title"><strong>Step 1: Title</strong></label>
-          <input
-            type="text"
-            className="form-control"
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            placeholder="Enter a title for your mystery"
-          />
-        </div>
+    <div className="container mt-5" style={{ maxWidth: '800px' }}>
+      <div className="card shadow-sm fade-in">
+        <div className="card-body p-4">
+          <h2 className="text-center mb-4">Share Your Mystery</h2>
+          
+          <form onSubmit={handleSubmit}>
+            {/* Title Input Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-heading me-2"></i>Title
+              </label>
+              <input
+                type="text"
+                className="form-control form-control-lg"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                placeholder="What's your mystery about?"
+                style={{ borderRadius: '10px' }}
+              />
+            </div>
 
-        {/* Image Upload Section */}
-        <div className="form-group mt-3">
-          <label htmlFor="image"><strong>Step 2: Upload an Image</strong></label>
-          <input
-            type="file"
-            className="form-control"
-            id="image"
-            onChange={handleImageChange}
-            accept="image/*"
-          />
-          <small className="form-text text-muted">
-            Upload an image to generate a sample description. You can edit it later if needed.
-          </small>
-        </div>
+            {/* Image Upload Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-image me-2"></i>Upload Image
+              </label>
+              <div className="input-group">
+                <input
+                  type="file"
+                  className="form-control"
+                  onChange={handleImageChange}
+                  accept="image/*"
+                  style={{ borderRadius: '10px' }}
+                />
+              </div>
+              <small className="text-muted">
+                Upload an image to automatically generate a description
+              </small>
+            </div>
 
-        {/* Generated Description Section */}
-        <div className="form-group mt-3">
-          <label htmlFor="description"><strong>Step 3: Description</strong></label>
-          <textarea
-            className="form-control"
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            style={{ height: '100px' }}
-            placeholder="Description will appear here after image upload"
-          />
-        </div>
+            {/* Description Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-align-left me-2"></i>Description
+              </label>
+              <textarea
+                className="form-control"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows="4"
+                placeholder="Describe your mystery in detail..."
+                style={{ borderRadius: '10px' }}
+              />
+            </div>
 
-{/* Mystery Attributes Section */}
-<div className="form-group mt-3">
-  <label>
-    <strong>Step 4: Mystery Attributes</strong>
-  </label>
-  <div className="d-flex justify-content-start">
-    <button
-      type="button"
-      className="btn btn-primary"
-      onClick={() => setShowMysteryAttributes(!showMysteryAttributes)}
-    >
-      {showMysteryAttributes ? 'Hide Mystery Attributes' : 'Show Mystery Attributes'}
-    </button>
-  </div>
-  {showMysteryAttributes && (
-    <div className="mt-3">
-      {Object.entries(mysteryAttributes).map(([category, tags], categoryIndex) => (
-        <div key={categoryIndex} className="mb-3">
-          <button
-            type="button"
-            className="btn btn-link"
-            style={{ textDecoration: 'none' }}
-            onClick={() => toggleCategory(category)}
-          >
-            <strong>{category}</strong> {expandedCategories.includes(category) ? '▼' : '▶'}
-          </button>
-          {expandedCategories.includes(category) && (
-            <>
-              {/* Identification Clues Section */}
-              {category === 'Identification Clues' ? (
-                <div className="mt-3">
-                  {tags.map((clueCategory, clueIndex) => (
-                    <div key={clueIndex} className="mb-3">
-                      <label>
-                        <strong>{clueCategory}</strong>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder={`Enter ${clueCategory}`}
-                        value={identificationInputs[clueCategory] || ''}
-                        onChange={(e) => handleIdentificationInputChange(clueCategory, e.target.value)}
-                      />
-                      <ul className="list-group mt-2">
-                        {identificationSuggestions[clueCategory]?.map((suggestion, index) => (
-                          <li
-                            key={index}
-                            className="list-group-item list-group-item-action"
-                            onClick={() => addIdentificationClue(clueCategory, suggestion)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <strong>{suggestion.name}</strong> - {suggestion.description}
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="mt-2">
-                        <label><strong>Selected {clueCategory}:</strong></label>
-                        <ul className="list-group">
-                          {(selectedIdentificationClues[clueCategory] || []).map((clue, index) => (
+            {/* Mystery Attributes Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-tags me-2"></i>Mystery Attributes
+              </label>
+              <button
+                type="button"
+                className="btn btn-outline-primary w-100 mb-3"
+                onClick={() => setShowMysteryAttributes(!showMysteryAttributes)}
+                style={{ borderRadius: '10px' }}
+              >
+                {showMysteryAttributes ? 'Hide Attributes' : 'Show Attributes'}
+              </button>
+
+              {showMysteryAttributes && (
+                <div className="card border-light">
+                  <div className="card-body">
+                    <div className="row">
+                      {Object.entries(mysteryAttributes).map(([category, attributes]) => (
+                        <div key={category} className="col-md-6 mb-3">
+                          <h6 className="mb-2">{category}</h6>
+                          <div className="d-flex flex-wrap gap-2">
+                            {attributes.map((attr) => (
+                              <div key={attr} className="form-check">
+                                <input
+                                  type="checkbox"
+                                  className="form-check-input"
+                                  id={`attr-${attr}`}
+                                  checked={selectedMysteryAttributes.includes(attr)}
+                                  onChange={() => {
+                                    setSelectedMysteryAttributes(prev =>
+                                      prev.includes(attr)
+                                        ? prev.filter(a => a !== attr)
+                                        : [...prev, attr]
+                                    );
+                                  }}
+                                />
+                                <label className="form-check-label" htmlFor={`attr-${attr}`}>
+                                  {attr}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Tags Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-tags me-2"></i>Additional Tags
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search for tags..."
+                value={tagSearch}
+                onChange={handleTagSearchChange}
+                style={{ borderRadius: '10px' }}
+              />
+              {tagSuggestions.length > 0 && (
+                <div className="card mt-2">
+                  <ul className="list-group list-group-flush">
+                    {tagSuggestions.map((tag, index) => (
+                      <li
+                        key={index}
+                        className="list-group-item list-group-item-action"
+                        onClick={() => addTag(tag)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <strong>{tag.name}</strong>
+                        {tag.description && ` - ${tag.description}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedTags.length > 0 && (
+                <div className="selected-tags mt-3">
+                  <h6 className="mb-2">Selected Tags:</h6>
+                  <div className="d-flex flex-wrap gap-2">
+                    {selectedTags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="badge bg-primary d-flex align-items-center"
+                        style={{ padding: '8px', fontSize: '0.9rem' }}
+                      >
+                        {tag.name}
+                        <button
+                          type="button"
+                          className="btn-close btn-close-white ms-2"
+                          style={{ fontSize: '0.7rem' }}
+                          onClick={() => removeTag(index)}
+                        ></button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Identification Clues Section */}
+            {showMysteryAttributes && (
+              <div className="form-group mb-4">
+                <label className="form-label fw-bold">
+                  <i className="fas fa-search me-2"></i>Identification Clues
+                </label>
+                {mysteryAttributes['Identification Clues'].map((clueCategory) => (
+                  <div key={clueCategory} className="mb-3">
+                    <label className="form-label">{clueCategory}</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder={`Enter ${clueCategory}`}
+                      value={identificationInputs[clueCategory] || ''}
+                      onChange={(e) => handleIdentificationInputChange(clueCategory, e.target.value)}
+                      style={{ borderRadius: '10px' }}
+                    />
+                    
+                    {identificationSuggestions[clueCategory]?.length > 0 && (
+                      <div className="card mt-2">
+                        <ul className="list-group list-group-flush">
+                          {identificationSuggestions[clueCategory].map((suggestion, index) => (
                             <li
                               key={index}
-                              className="list-group-item d-flex justify-content-between align-items-center"
+                              className="list-group-item list-group-item-action"
+                              onClick={() => addIdentificationClue(clueCategory, suggestion)}
+                              style={{ cursor: 'pointer' }}
                             >
-                              {clue.name} - {clue.description}
-                              <button
-                                type="button"
-                                className="btn btn-danger btn-sm"
-                                onClick={() => removeIdentificationClue(clueCategory, index)}
-                              >
-                                Remove
-                              </button>
+                              <strong>{suggestion.name}</strong>
+                              {suggestion.description && ` - ${suggestion.description}`}
                             </li>
                           ))}
                         </ul>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Display other attributes in two columns */
-                <div className="row mt-3">
-                  {tags.map((tag, tagIndex) => (
-                    <div key={tagIndex} className="col-md-6">
-                      <div className="form-check">
-                        <input
-                          type="checkbox"
-                          className="form-check-input"
-                          id={`${category}-${tag}`}
-                          checked={selectedMysteryAttributes.includes(tag)}
-                          onChange={() =>
-                            setSelectedMysteryAttributes((prev) =>
-                              prev.includes(tag)
-                                ? prev.filter((t) => t !== tag)
-                                : [...prev, tag]
-                            )
-                          }
-                        />
-                        <label
-                          className="form-check-label"
-                          htmlFor={`${category}-${tag}`}
-                        >
-                          {tag}
-                        </label>
+                    )}
+
+                    {selectedIdentificationClues[clueCategory]?.length > 0 && (
+                      <div className="selected-clues mt-2">
+                        <h6 className="mb-2">Selected {clueCategory}:</h6>
+                        <div className="d-flex flex-wrap gap-2">
+                          {selectedIdentificationClues[clueCategory].map((clue, index) => (
+                            <span
+                              key={index}
+                              className="badge bg-info d-flex align-items-center"
+                              style={{ padding: '8px', fontSize: '0.9rem' }}
+                            >
+                              {clue.name}
+                              <button
+                                type="button"
+                                className="btn-close btn-close-white ms-2"
+                                style={{ fontSize: '0.7rem' }}
+                                onClick={() => removeIdentificationClue(clueCategory, index)}
+                              ></button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Additional Media Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-film me-2"></i>Additional Media
+              </label>
+              <input
+                type="file"
+                className="form-control mb-2"
+                onChange={(e) => setVideo(e.target.files[0])}
+                accept="video/*"
+                style={{ borderRadius: '10px' }}
+              />
+              <small className="text-muted d-block mb-3">Upload a video (optional)</small>
+
+              <input
+                type="file"
+                className="form-control"
+                onChange={(e) => setAudio(e.target.files[0])}
+                accept="audio/*"
+                style={{ borderRadius: '10px' }}
+              />
+              <small className="text-muted d-block">Upload an audio file (optional)</small>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg w-100"
+              style={{ borderRadius: '10px' }}
+            >
+              Post Mystery
+            </button>
+          </form>
         </div>
-      ))}
-    </div>
-  )}
-</div>
-
-
-
-
-        {/* Tag Search and Selection Section */}
-        <div className="form-group mt-3">
-          <label htmlFor="tagSearch"><strong>Step 5: Additional Tags</strong></label>
-          <input
-            type="text"
-            className="form-control"
-            id="tagSearch"
-            placeholder="Type to search for tags"
-            value={tagSearch}
-            onChange={handleTagSearchChange}
-          />
-          <ul className="list-group mt-1">
-            {tagSuggestions.map((tag, index) => (
-              <li
-                key={index}
-                className="list-group-item list-group-item-action"
-                onClick={() => addTag(tag)}
-                style={{ cursor: 'pointer' }}
-              >
-                <strong>{tag.name}</strong> - {tag.description}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="form-group mt-3">
-          <label>Selected Tags:</label>
-          <ul className="list-group">
-            {selectedTags.map((tag, index) => (
-              <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                {tag.name} - {tag.description}
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  onClick={() => removeTag(index)}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Video and Audio Uploads */}
-        <div className="form-group mt-3">
-          <label htmlFor="video"><strong>Step 6: Additional Media</strong></label>
-          <input
-            type="file"
-            className="form-control"
-            id="video"
-            onChange={(e) => setVideo(e.target.files[0])}
-            accept="video/*"
-          />
-          <small className="form-text text-muted">Upload a video (optional).</small>
-        </div>
-
-        <div className="form-group mt-3">
-          <input
-            type="file"
-            className="form-control"
-            id="audio"
-            onChange={(e) => setAudio(e.target.files[0])}
-            accept="audio/*"
-          />
-          <small className="form-text text-muted">Upload an audio file (optional).</small>
-        </div>
-
-        <button type="submit" className="btn btn-primary mt-3 w-100">
-          Submit Mystery
-        </button>
-      </form>
+      </div>
     </div>
   );
 };

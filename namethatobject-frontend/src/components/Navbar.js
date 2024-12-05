@@ -71,49 +71,25 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg" style={{ backgroundColor: 'var(--background-gray)' }}>
+    <nav className="navbar navbar-expand-lg sticky-top" style={{ backgroundColor: 'white' }}>
       <div className="container">
-        <Link className="navbar-brand" to="/" style={{ color: 'var(--primary-text-gray)' }}>
+        <Link className="navbar-brand d-flex align-items-center" to="/">
           <img src={logo} alt="NameThatObject Logo" style={{ height: '40px' }} />
         </Link>
 
-        <div className="collapse navbar-collapse justify-content-end">
-          <div className="navbar-nav">
-            {isLoggedIn && (
-              <Link
-                className="nav-link btn btn-primary text-white me-2"
-                to="/post-mystery"
-                style={{ backgroundColor: 'var(--primary-blue)' }}
-              >
-                Post a Mystery
-              </Link>
-            )}
-
-            {isLoggedIn ? (
-              <>
-                <Link className="nav-link" to="/profile" style={{ color: 'var(--primary-text-gray)' }}>
-                  {username}
-                </Link>
-                <button className="nav-link btn btn-link" style={{ color: 'var(--primary-text-gray)' }} onClick={handleLogout}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link className="nav-link" to="/signup" style={{ color: 'var(--primary-text-gray)' }}>Sign Up</Link>
-                <Link className="nav-link" to="/signin" style={{ color: 'var(--primary-text-gray)' }}>Sign In</Link>
-              </>
-            )}
-          </div>
-
-          <form className="form-inline my-2 my-lg-0 position-relative" onSubmit={handleSearchSubmit}>
+        <div className="d-flex align-items-center">
+          <form className="form-inline me-3 position-relative" onSubmit={handleSearchSubmit}>
             <input
               type="text"
               className="form-control"
               placeholder="Search mysteries..."
               value={searchTerm}
               onChange={handleSearchChange}
-              style={{ width: '250px', borderColor: 'var(--primary-blue)' }}
+              style={{ 
+                width: '250px',
+                borderRadius: '20px',
+                paddingLeft: '15px'
+              }}
             />
             {searchResults.length > 0 && (
               <ul
@@ -133,6 +109,57 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
               </ul>
             )}
           </form>
+
+          <div className="d-flex align-items-center">
+            {isLoggedIn && (
+              <Link
+                className="btn btn-primary me-3"
+                to="/post-mystery"
+                style={{ 
+                  borderRadius: '20px',
+                  padding: '8px 20px'
+                }}
+              >
+                Post a Mystery
+              </Link>
+            )}
+
+            {isLoggedIn ? (
+              <>
+                <Link 
+                  className="nav-link me-3" 
+                  to="/profile"
+                  style={{ color: 'var(--primary-text-gray)' }}
+                >
+                  {username}
+                </Link>
+                <button 
+                  className="btn btn-outline-secondary"
+                  onClick={handleLogout}
+                  style={{ borderRadius: '20px' }}
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  className="btn btn-outline-primary me-2" 
+                  to="/signup"
+                  style={{ borderRadius: '20px' }}
+                >
+                  Sign Up
+                </Link>
+                <Link 
+                  className="btn btn-primary" 
+                  to="/signin"
+                  style={{ borderRadius: '20px' }}
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </nav>

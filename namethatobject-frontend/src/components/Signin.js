@@ -32,41 +32,57 @@ const Signin = () => {
     };
 
     return (
-        <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-            <div className="card shadow-sm p-4" style={{ width: '100%', maxWidth: '400px' }}>
-                <h2 className="text-center mb-4">Welcome Back</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-3">
-                        <label htmlFor="username" className="form-label">Username</label>
-                        <input 
-                            type="text" 
-                            name="username" 
-                            id="username" 
-                            className="form-control" 
-                            placeholder="Enter your username" 
-                            value={credentials.username} 
-                            onChange={handleChange} 
-                            required 
-                        />
+        <div className="container mt-5">
+            <div className="row justify-content-center">
+                <div className="col-md-6 col-lg-5">
+                    <div className="card shadow-lg fade-in">
+                        <div className="card-body p-5">
+                            <h2 className="text-center mb-4">Welcome Back</h2>
+                            
+                            <form onSubmit={handleSubmit}>
+                                <div className="mb-4">
+                                    <label className="form-label">Username</label>
+                                    <input
+                                        type="text"
+                                        className="form-control form-control-lg"
+                                        name="username"
+                                        value={credentials.username}
+                                        onChange={handleChange}
+                                        required
+                                        style={{ borderRadius: '10px' }}
+                                    />
+                                </div>
+                                
+                                <div className="mb-4">
+                                    <label className="form-label">Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-control form-control-lg"
+                                        name="password"
+                                        value={credentials.password}
+                                        onChange={handleChange}
+                                        required
+                                        style={{ borderRadius: '10px' }}
+                                    />
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary btn-lg w-100"
+                                    style={{ borderRadius: '10px' }}
+                                >
+                                    Sign In
+                                </button>
+                            </form>
+                            
+                            {message && (
+                                <div className="alert alert-danger mt-4 text-center fade-in">
+                                    {message}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="mb-4">
-                        <label htmlFor="password" className="form-label">Password</label>
-                        <input 
-                            type="password" 
-                            name="password" 
-                            id="password" 
-                            className="form-control" 
-                            placeholder="Enter your password" 
-                            value={credentials.password} 
-                            onChange={handleChange} 
-                            required 
-                        />
-                    </div>
-                    <button type="submit" className="btn btn-primary w-100">Sign In</button>
-                </form>
-                {message && (
-                    <div className="alert alert-danger mt-4 text-center">{message}</div>
-                )}
+                </div>
             </div>
         </div>
     );
