@@ -12,5 +12,6 @@ router.register(r'comments', CommentViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('user/profile/', UserProfileView.as_view(), name='user_profile'),  # User profile endpoint
+    path('user/profile/<str:username>/', UserProfileView.as_view(), name='user_profile_detail'),
     path('api/signup/', SignUpView.as_view(), name='signup'),  # Signup endpoint
 ]

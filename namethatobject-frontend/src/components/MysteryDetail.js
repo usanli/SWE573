@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import Modal from "react-modal";
@@ -449,10 +449,27 @@ const MysteryDetail = () => {
         <div className="row align-items-center">
           <div className="col-md-8">
             <h2 className="mb-3">{mystery.title}</h2>
-            <p className="text-muted">
-              Posted by {mystery.author?.username || "Anonymous"} on{" "}
-              {new Date(mystery.created_at).toLocaleDateString()}
-            </p>
+            <div className="d-flex align-items-center mb-2">
+              <Link 
+                to={`/profile/${mystery.author?.username}`}
+                className="text-decoration-none me-2"
+              >
+                <img
+                  src={
+                    mystery.author?.profile_picture
+                      ? `${API_BASE_URL}${mystery.author.profile_picture}`
+                      : `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
+                  }
+                  alt={mystery.author?.username}
+                  className="rounded-circle"
+                  style={{ width: '32px', height: '32px' }}
+                />
+                <span className="ms-2 text-primary">{mystery.author?.username}</span>
+              </Link>
+              <span className="text-muted">
+                • {new Date(mystery.created_at).toLocaleString()}
+              </span>
+            </div>
           </div>
           <div className="col-md-4 text-md-end">
             <div className="vote-section">
@@ -531,7 +548,24 @@ const MysteryDetail = () => {
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-start">
                   <div>
-                    <h6 className="mb-1">{comment.author?.username || "Anonymous"}</h6>
+                    <Link 
+                      to={`/profile/${comment.author?.username}`}
+                      className="text-decoration-none"
+                    >
+                      <div className="d-flex align-items-center">
+                        <img
+                          src={
+                            comment.author?.profile_picture
+                              ? `${API_BASE_URL}${comment.author.profile_picture}`
+                              : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
+                          }
+                          alt={comment.author?.username}
+                          className="rounded-circle me-2"
+                          style={{ width: '32px', height: '32px' }}
+                        />
+                        <h6 className="mb-1">{comment.author?.username}</h6>
+                      </div>
+                    </Link>
                     <span className={`badge ${
                       comment.tag === "Question" ? "bg-primary" :
                       comment.tag === "Hint" ? "bg-warning" :
@@ -541,7 +575,7 @@ const MysteryDetail = () => {
                     </span>
                   </div>
                   <small className="text-muted">
-                    {new Date(comment.created_at).toLocaleDateString()}
+                    {new Date(comment.created_at).toLocaleString()}
                   </small>
                 </div>
                 
@@ -582,14 +616,29 @@ const MysteryDetail = () => {
                       <div key={reply.id} className="card mb-2">
                         <div className="card-body py-2">
                           <div className="d-flex justify-content-between align-items-start">
-                            <div>
-                              <strong>{reply.author?.username || "Anonymous"}</strong>
-                              <p className="mb-2 mt-1">{reply.text}</p>
-                            </div>
+                            <Link 
+                              to={`/profile/${reply.author?.username}`}
+                              className="text-decoration-none"
+                            >
+                              <div className="d-flex align-items-center">
+                                <img
+                                  src={
+                                    reply.author?.profile_picture
+                                      ? `${API_BASE_URL}${reply.author.profile_picture}`
+                                      : `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=24`
+                                  }
+                                  alt={reply.author?.username}
+                                  className="rounded-circle me-2"
+                                  style={{ width: '24px', height: '24px' }}
+                                />
+                                <strong>{reply.author?.username}</strong>
+                              </div>
+                            </Link>
                             <small className="text-muted">
-                              {new Date(reply.created_at).toLocaleDateString()}
+                              {new Date(reply.created_at).toLocaleString()}
                             </small>
                           </div>
+                          <p className="mb-2 mt-1">{reply.text}</p>
                           {isLoggedIn && (
                             <div className="d-flex align-items-center mt-2">
                               <div className="btn-group btn-group-sm">

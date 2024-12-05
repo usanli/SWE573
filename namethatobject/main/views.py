@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from .models import Post, Comment, UserProfile
 from .forms import CommentForm
-from .serializers import PostSerializer, CommentSerializer, UserSerializer
+from .serializers import PostSerializer, CommentSerializer, UserSerializer, UserProfileSerializer
 
 def post_list(request):
     posts = Post.objects.all()
@@ -112,14 +112,36 @@ class SignUpView(APIView):
             "token": token.key
         }, status=status.HTTP_201_CREATED)
 
-class UserProfileView(generics.RetrieveAPIView):
+class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        user = request.user
-        user_data = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-        }
-        return Response(user_data, status=status.HTTP_200_OK)
+    def get(self, request, username=None):
+        try:
+            if username:
+                user = get_object_or_404(User, username=username)
+                profile = get_object_or_404(UserProfile, user=user)
+            else:
+                profile = get_object_or_404(UserProfile, user=request.user)
+            
+            serializer = UserProfileSerializer(profile)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'message': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def patch(self, request):
+        try:
+            profile = get_object_or_404(UserProfile, user=request.user)
+            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+            
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response(
+                {'message': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

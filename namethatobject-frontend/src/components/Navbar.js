@@ -128,7 +128,7 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
               <>
                 <Link 
                   className="nav-link me-3" 
-                  to="/profile"
+                  to={`/profile/${username}`}
                   style={{ color: 'var(--primary-text-gray)' }}
                 >
                   {username}
