@@ -55,7 +55,10 @@ const Profile = () => {
       // Fetch posts
       const postsResponse = await axios.get(`${API_BASE_URL}/posts/`);
       const userSpecificPosts = postsResponse.data
-        .filter(post => post.author?.username === (profileUsername || loggedInUsername))
+        .filter(post => 
+          post.author?.username === (profileUsername || loggedInUsername) && 
+          !post.is_anonymous
+        )
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setUserPosts(userSpecificPosts);
 

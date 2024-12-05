@@ -14,6 +14,8 @@ class Post(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     upvotes = models.IntegerField(default=0)
     downvotes = models.IntegerField(default=0)
+    eureka_comment = models.IntegerField(null=True, blank=True)
+    is_anonymous = models.BooleanField(default=False)
 
     @property
     def points(self):

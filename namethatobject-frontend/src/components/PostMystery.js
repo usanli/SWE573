@@ -1,4 +1,4 @@
-﻿﻿import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
@@ -19,6 +19,7 @@ const PostMystery = () => {
   const [identificationInputs, setIdentificationInputs] = useState({});
   const [identificationSuggestions, setIdentificationSuggestions] = useState({});
   const [selectedIdentificationClues, setSelectedIdentificationClues] = useState({});
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
@@ -169,6 +170,7 @@ const PostMystery = () => {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
+    formData.append('is_anonymous', isAnonymous);
 
     // Format all tags into a single array with proper structure
     const allTags = [
@@ -236,13 +238,28 @@ const PostMystery = () => {
               </label>
               <input
                 type="text"
-                className="form-control form-control-lg"
+                className="form-control"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                required
-                placeholder="What's your mystery about?"
+                placeholder="Enter the title of your mystery..."
                 style={{ borderRadius: '10px' }}
+                required
               />
+              <div className="form-check mt-2">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="anonymousCheck"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="anonymousCheck">
+                  Post Anonymously
+                </label>
+                <small className="text-muted d-block">
+                  Your identity will be hidden from other users, but you'll still be able to manage your post.
+                </small>
+              </div>
             </div>
 
             {/* Image Upload Section */}

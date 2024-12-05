@@ -42,6 +42,27 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Check if user is the author
+        if instance.author != request.user:
+            return Response(
+                {"error": "Only the author can update this post"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Handle the eureka_comment update
+        if 'eureka_comment' in request.data:
+            instance.eureka_comment = request.data['eureka_comment']
+        
+        # Handle tags update
+        if 'tags' in request.data:
+            instance.tags = request.data['tags']
+        
+        instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def upvote(self, request, pk=None):
         post = self.get_object()

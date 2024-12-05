@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
@@ -17,6 +17,8 @@ const MysteryDetail = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const token = localStorage.getItem("token");
   const username = JSON.parse(localStorage.getItem("userData"))?.username;
+  const [showEurekaSelection, setShowEurekaSelection] = useState(false);
+  const [selectedEurekaComment, setSelectedEurekaComment] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,25 +105,55 @@ const MysteryDetail = () => {
   };
 
   const handleMarkSolved = async () => {
-    if (!mystery) return;
+    if (!mystery || !isLoggedIn || mystery.author?.username !== username) return;
+    setShowEurekaSelection(true);
+  };
 
-    const updatedTags = [
-      ...(mystery.tags || []),
-      {
-        name: "Mystery Solved!",
-        description: "Mystery is solved",
-        wikidata_id: "no_id",
-      },
-    ];
+  const handleSolvedSubmission = async () => {
+    if (!selectedEurekaComment) {
+      alert("Please select the comment that solved the mystery!");
+      return;
+    }
+
     try {
-      await axios.patch(
+      const updatedTags = [
+        ...(mystery.tags || []),
+        {
+          name: "Mystery Solved!",
+          description: "Mystery is solved",
+          wikidata_id: "no_id",
+        },
+      ];
+
+      const response = await axios.patch(
         `${API_BASE_URL}/posts/${id}/`,
-        { tags: updatedTags },
-        { headers: { Authorization: `Token ${token}` } }
+        { 
+          tags: updatedTags,
+          eureka_comment: selectedEurekaComment 
+        },
+        { 
+          headers: { 
+            Authorization: `Token ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
-      setMystery({ ...mystery, tags: updatedTags });
+
+      if (response.data) {
+        setMystery(response.data);
+        setShowEurekaSelection(false);
+        setSelectedEurekaComment(null);
+        
+        // Refresh the comments to show the updated eureka status
+        const commentsResponse = await axios.get(`${API_BASE_URL}/comments/`);
+        const postComments = commentsResponse.data.filter(
+          (comment) => comment.post === parseInt(id)
+        );
+        setComments(postComments);
+      }
     } catch (error) {
       console.error("Error marking mystery as solved:", error);
+      alert("Error updating the post. Please try again.");
     }
   };
 
@@ -227,6 +259,17 @@ const MysteryDetail = () => {
     setSelectedMedia("");
   };
 
+  const sortedComments = useMemo(() => {
+    if (!comments.length) return [];
+    return [...comments].sort((a, b) => {
+      // Eureka comment always first
+      if (mystery.eureka_comment === a.id) return -1;
+      if (mystery.eureka_comment === b.id) return 1;
+      // Then sort by date
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+  }, [comments, mystery?.eureka_comment]);
+
   if (!mystery) {
     return <p>Loading...</p>;
   }
@@ -234,279 +277,277 @@ const MysteryDetail = () => {
   const isSolved = mystery.tags?.some((tag) => tag.name === "Mystery Solved!");
 
   return (
-    <div
-      className="container mt-4"
-      style={{
-        border: isSolved ? "4px solid #28a745" : "none",
-        borderRadius: "10px",
-        padding: "15px",
-      }}
-    >
-      <div className="d-flex align-items-center">
-        {/* Voting Section */}
-        {isLoggedIn && (
-          <div
-            className="d-flex flex-column align-items-center me-3"
-            style={{
-              position: "relative",
-              marginLeft: "-50px", // Fixed to leftmost side
-            }}
-          >
-            <span
-              className="text-success"
-              style={{ fontSize: "24px", cursor: "pointer" }}
-              onClick={() => handleVote("upvote")}
-            >
-              ▲
-            </span>
-            <span
-              style={{
-                fontSize: "16px",
-                fontWeight: "bold",
-                margin: "4px 0",
-                color: "var(--primary-text-gray)",
-              }}
-            >
-              {mystery.upvotes - mystery.downvotes}
-            </span>
-            <span
-              className="text-danger"
-              style={{ fontSize: "24px", cursor: "pointer" }}
-              onClick={() => handleVote("downvote")}
-            >
-              ▼
-            </span>
-          </div>
-        )}
-
-        {/* Title Section */}
-        <div className="title-section">
-          <h1 className="text-center">{mystery.title}</h1>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-start",
-              marginTop: "10px",
-            }}
-          >
-            {!isSolved && isLoggedIn && (
-              <button
-                className="btn btn-success"
-                style={{ position: "relative" }}
-                onClick={handleMarkSolved}
-              >
-                Mystery Solved!
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Media Section */}
-      {mystery.image && (
-        <div
-          onClick={() =>
-            openModal(
-              mystery.image.startsWith("http")
-                ? mystery.image
-                : `${API_BASE_URL}${mystery.image}`
-            )
-          }
-          style={{
-            cursor: "pointer",
-            overflow: "hidden",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            src={
-              mystery.image.startsWith("http")
-                ? mystery.image
-                : `${API_BASE_URL}${mystery.image}`
-            }
-            alt={mystery.title}
-            style={{
-              width: "100%",
-              maxWidth: "500px",
-              height: "300px",
-              objectFit: "cover",
-              borderRadius: "8px",
-            }}
-          />
-        </div>
-      )}
-
-      {/* Media Gallery Section */}
-      <div className="media-gallery mb-4">
-        <div className="row">
-          {/* Image */}
-          {mystery.image && (
-            <div className="col-md-6 mb-3">
-              <div className="media-item h-100">
-                <h5 className="mb-3">Image</h5>
-                <div
-                  onClick={() => openModal(
-                    mystery.image.startsWith("http")
-                      ? mystery.image
-                      : `${API_BASE_URL}${mystery.image}`,
-                    'image'
-                  )}
-                  className="media-container"
-                  style={{
-                    cursor: "pointer",
-                    overflow: "hidden",
-                    borderRadius: "12px",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                    transition: "transform 0.3s ease",
-                    maxHeight: "300px"
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <img
-                    src={mystery.image.startsWith("http") ? mystery.image : `${API_BASE_URL}${mystery.image}`}
-                    alt={mystery.title}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Video */}
-          {mystery.video && (
-            <div className="col-md-6 mb-3">
-              <div className="media-item h-100">
-                <h5 className="mb-3">Video</h5>
-                <div
-                  className="media-container"
-                  style={{
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                    maxHeight: "300px"
-                  }}
-                >
-                  <video
-                    controls
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      backgroundColor: "#000"
-                    }}
-                  >
-                    <source 
-                      src={mystery.video.startsWith("http") ? mystery.video : `${API_BASE_URL}${mystery.video}`}
-                      type="video/mp4"
-                    />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Audio */}
-          {mystery.audio && (
-            <div className="col-md-6 mb-3">
-              <div className="media-item">
-                <h5 className="mb-3">Audio</h5>
-                <div
-                  className="media-container p-3"
-                  style={{
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "12px",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-                  }}
-                >
-                  <audio
-                    controls
-                    style={{ width: "100%" }}
-                  >
-                    <source 
-                      src={mystery.audio.startsWith("http") ? mystery.audio : `${API_BASE_URL}${mystery.audio}`}
-                      type="audio/mpeg"
-                    />
-                    Your browser does not support the audio element.
-                  </audio>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Mystery Info Section */}
-      <div className="mystery-info mb-4">
-        <div className="row align-items-center">
-          <div className="col-md-8">
-            <h2 className="mb-3">{mystery.title}</h2>
-            <div className="d-flex align-items-center mb-2">
-              <Link 
-                to={`/profile/${mystery.author?.username}`}
-                className="text-decoration-none me-2"
-              >
-                <img
-                  src={
-                    mystery.author?.profile_picture
-                      ? `${API_BASE_URL}${mystery.author.profile_picture}`
-                      : `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
-                  }
-                  alt={mystery.author?.username}
-                  className="rounded-circle"
-                  style={{ width: '32px', height: '32px' }}
-                />
-                <span className="ms-2 text-primary">{mystery.author?.username}</span>
-              </Link>
-              <span className="text-muted">
-                • {new Date(mystery.created_at).toLocaleString()}
-              </span>
-            </div>
-          </div>
-          <div className="col-md-4 text-md-end">
-            <div className="vote-section">
-              <div className="btn-group">
+    <div className="container mt-4">
+      <div className="card shadow-sm mb-4">
+        <div className="card-body">
+          <div className="row align-items-center">
+            <div className="col-auto">
+              <div className="voting-section d-flex flex-column align-items-center">
                 <button
-                  className={`btn ${isLoggedIn ? 'btn-outline-success' : 'btn-secondary'}`}
+                  className="btn btn-link p-0"
                   onClick={() => handleVote("upvote")}
                   disabled={!isLoggedIn}
                 >
-                  ▲ {mystery.upvotes}
+                  <i className="fas fa-arrow-up text-success" style={{ fontSize: '24px' }}></i>
                 </button>
+                <span className="vote-count my-2" style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                  {mystery.upvotes - mystery.downvotes}
+                </span>
                 <button
-                  className={`btn ${isLoggedIn ? 'btn-outline-danger' : 'btn-secondary'}`}
+                  className="btn btn-link p-0"
                   onClick={() => handleVote("downvote")}
                   disabled={!isLoggedIn}
                 >
-                  ▼ {mystery.downvotes}
+                  <i className="fas fa-arrow-down text-danger" style={{ fontSize: '24px' }}></i>
                 </button>
               </div>
-              {!isLoggedIn && (
-                <small className="d-block text-muted mt-2">
-                  Sign in to vote
-                </small>
-              )}
+            </div>
+
+            <div className="col">
+              <h1 className="mb-3">{mystery.title}</h1>
+              <div className="d-flex align-items-center">
+                {mystery.is_anonymous ? (
+                  <div className="d-flex align-items-center me-2">
+                    <img
+                      src={`https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`}
+                      alt="Anonymous"
+                      className="rounded-circle"
+                      style={{ width: '32px', height: '32px' }}
+                    />
+                    <span className="ms-2 text-muted">Anonymous</span>
+                  </div>
+                ) : (
+                  <Link 
+                    to={`/profile/${mystery.author?.username}`}
+                    className="text-decoration-none me-2"
+                  >
+                    <img
+                      src={
+                        mystery.author?.profile_picture
+                          ? `${API_BASE_URL}${mystery.author.profile_picture}`
+                          : `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
+                      }
+                      alt={mystery.author?.username}
+                      className="rounded-circle"
+                      style={{ width: '32px', height: '32px' }}
+                    />
+                    <span className="ms-2 text-primary">{mystery.author?.username}</span>
+                  </Link>
+                )}
+                <span className="text-muted">
+                  • {new Date(mystery.created_at).toLocaleString()}
+                </span>
+                {!isSolved && isLoggedIn && mystery.author?.username === username && (
+                  <button
+                    className="btn btn-success btn-sm ms-auto"
+                    onClick={handleMarkSolved}
+                  >
+                    Mark as Solved
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-        
-        {renderTags()}
-        
-        <div className="description-section mt-4">
-          <h5 className="mb-3">Description</h5>
-          <p className="lead">{mystery.description}</p>
+      </div>
+
+      {isSolved && (
+        <div className="solved-banner card bg-success text-white mb-4">
+          <div className="card-body d-flex align-items-center">
+            <i className="fas fa-check-circle me-3" style={{ fontSize: '24px' }}></i>
+            <div>
+              <h5 className="mb-0">Mystery Solved!</h5>
+              <small>This mystery has been successfully identified</small>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card shadow-sm mb-4">
+        <div className="card-body">
+          <div className="media-gallery mb-4">
+            <div className="row g-4">
+              {mystery.image && (
+                <div className="col-md-6">
+                  <div 
+                    className="media-container position-relative"
+                    onClick={() => openModal(mystery.image.startsWith("http") ? mystery.image : `${API_BASE_URL}${mystery.image}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <img
+                      src={mystery.image.startsWith("http") ? mystery.image : `${API_BASE_URL}${mystery.image}`}
+                      alt={mystery.title}
+                      className="rounded w-100"
+                      style={{ height: '300px', objectFit: 'cover' }}
+                    />
+                    <div className="overlay-hover d-flex align-items-center justify-content-center">
+                      <i className="fas fa-search-plus text-white" style={{ fontSize: '24px' }}></i>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {mystery.video && (
+                <div className="col-md-6">
+                  <div className="media-container">
+                    <video
+                      controls
+                      style={{
+                        width: "100%",
+                        height: "300px",
+                        objectFit: "cover",
+                        backgroundColor: "#000",
+                        borderRadius: "12px"
+                      }}
+                    >
+                      <source 
+                        src={mystery.video.startsWith("http") ? mystery.video : `${API_BASE_URL}${mystery.video}`}
+                        type="video/mp4"
+                      />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                </div>
+              )}
+              {mystery.audio && (
+                <div className="col-md-6">
+                  <div className="media-item">
+                    <h5 className="mb-3">Audio</h5>
+                    <div
+                      className="media-container p-3"
+                      style={{
+                        backgroundColor: "#f8f9fa",
+                        borderRadius: "12px",
+                        boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                      }}
+                    >
+                      <audio
+                        controls
+                        style={{ width: "100%" }}
+                      >
+                        <source 
+                          src={mystery.audio.startsWith("http") ? mystery.audio : `${API_BASE_URL}${mystery.audio}`}
+                          type="audio/mpeg"
+                        />
+                        Your browser does not support the audio element.
+                      </audio>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {renderTags()}
+
+          <div className="description-section mt-4">
+            <h5 className="mb-3">Description</h5>
+            <p className="lead">{mystery.description}</p>
+          </div>
         </div>
       </div>
 
-      {/* Comments Section */}
+      <Modal
+        isOpen={showEurekaSelection}
+        onRequestClose={() => setShowEurekaSelection(false)}
+        contentLabel="Select Eureka Comment"
+        style={{
+          overlay: {
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          },
+          content: {
+            position: 'relative',
+            top: 'auto',
+            left: 'auto',
+            right: 'auto',
+            bottom: 'auto',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            padding: '0',
+            border: 'none',
+            borderRadius: '12px',
+            backgroundColor: 'white'
+          }
+        }}
+      >
+        <div className="modal-header bg-success text-white p-4">
+          <h5 className="mb-0">Select the Comment that Solved the Mystery</h5>
+          <button 
+            className="btn-close btn-close-white" 
+            onClick={() => setShowEurekaSelection(false)}
+          ></button>
+        </div>
+        <div className="modal-body p-4">
+          <p className="text-muted mb-4">
+            Choose the comment that provided the correct answer to your mystery.
+            This comment will be marked as the "Eureka Comment"!
+          </p>
+          
+          <div className="comments-list" style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+            {sortedComments.map((comment) => (
+              <div 
+                key={comment.id} 
+                className={`card mb-2 cursor-pointer ${
+                  selectedEurekaComment === comment.id ? 'border-success shadow' : ''
+                }`}
+                onClick={() => setSelectedEurekaComment(comment.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div className="d-flex align-items-center">
+                      <img
+                        src={
+                          comment.author?.profile_picture
+                            ? `${API_BASE_URL}${comment.author.profile_picture}`
+                            : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=24`
+                        }
+                        alt={comment.author?.username}
+                        className="rounded-circle me-2"
+                        style={{ width: '24px', height: '24px' }}
+                      />
+                      <strong>{comment.author?.username}</strong>
+                    </div>
+                    <small className="text-muted">
+                      {new Date(comment.created_at).toLocaleString()}
+                    </small>
+                  </div>
+                  <p className="mb-1 mt-2">{comment.text}</p>
+                  {selectedEurekaComment === comment.id && (
+                    <div className="text-success mt-2">
+                      <i className="fas fa-check-circle"></i> Selected as Eureka Comment
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="d-flex justify-content-end gap-2 mt-4">
+            <button 
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowEurekaSelection(false);
+                setSelectedEurekaComment(null);
+              }}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn btn-success"
+              onClick={handleSolvedSubmission}
+              disabled={!selectedEurekaComment}
+            >
+              Mark as Solved
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <div className="comments-section mt-5">
         <h3 className="mb-4 border-bottom pb-2">Discussion</h3>
         
@@ -543,7 +584,7 @@ const MysteryDetail = () => {
         )}
 
         <div className="comments-list">
-          {comments.map((comment) => (
+          {sortedComments.map((comment) => (
             <div key={comment.id} className="card mb-3 shadow-sm fade-in">
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-start">
@@ -573,6 +614,17 @@ const MysteryDetail = () => {
                     } mb-2`}>
                       {comment.tag}
                     </span>
+                    {mystery.eureka_comment === comment.id && (
+                      <div className="eureka-comment-banner bg-success text-white p-3 rounded mt-2 mb-3">
+                        <div className="d-flex align-items-center">
+                          <i className="fas fa-lightbulb me-2" style={{ fontSize: '20px' }}></i>
+                          <div>
+                            <strong className="d-block">Eureka Comment!</strong>
+                            <small>This comment solved the mystery</small>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <small className="text-muted">
                     {new Date(comment.created_at).toLocaleString()}
@@ -758,6 +810,78 @@ const MysteryDetail = () => {
           )}
         </div>
       </Modal>
+
+      <style>
+        {`
+          .cursor-pointer {
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .cursor-pointer:hover {
+            transform: translateY(-2px);
+          }
+
+          .eureka-comment-banner {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+            animation: glow 2s infinite alternate;
+          }
+
+          @keyframes glow {
+            from {
+              box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+            }
+            to {
+              box-shadow: 0 2px 12px rgba(40, 167, 69, 0.6);
+            }
+          }
+
+          .comment-with-eureka {
+            border-left: 4px solid #28a745;
+            background-color: rgba(40, 167, 69, 0.05);
+          }
+
+          .card.border-success {
+            border-width: 2px !important;
+          }
+
+          .modal-body {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,0,0,0.2) transparent;
+          }
+
+          .modal-body::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          .modal-body::-webkit-scrollbar-thumb {
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 3px;
+          }
+
+          .media-container {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          }
+
+          .overlay-hover {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.3s;
+          }
+
+          .media-container:hover .overlay-hover {
+            opacity: 1;
+          }
+        `}
+      </style>
     </div>
   );
 };

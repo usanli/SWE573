@@ -27,10 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
+    eureka_comment = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Post
-        fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'author', 'points', 'upvotes', 'downvotes']
+        fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'author', 'points', 'upvotes', 'downvotes', 'eureka_comment', 'is_anonymous']
 
 
 class CommentSerializer(serializers.ModelSerializer):

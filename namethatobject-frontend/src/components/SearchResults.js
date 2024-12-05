@@ -193,6 +193,26 @@ const SearchResults = () => {
                     </Link>
                   </h5>
                   <p>{mystery.description}</p>
+                  <div className="d-flex align-items-center mb-2">
+                    {mystery.is_anonymous ? (
+                      <span className="text-muted">
+                        <i className="fas fa-user-secret me-1"></i>
+                        Anonymous
+                      </span>
+                    ) : (
+                      <Link 
+                        to={`/profile/${mystery.author?.username}`}
+                        className="text-decoration-none text-muted"
+                      >
+                        <i className="fas fa-user me-1"></i>
+                        {mystery.author?.username}
+                      </Link>
+                    )}
+                    <span className="mx-2">•</span>
+                    <small className="text-muted">
+                      {new Date(mystery.created_at).toLocaleString()}
+                    </small>
+                  </div>
                   {mystery.tags && (
                     <div className="tags mt-2">
                       {mystery.tags.map((tag, index) => (
