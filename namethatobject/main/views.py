@@ -84,8 +84,27 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        # Save the comment with the associated user
         serializer.save(author=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        comment = self.get_object()
+        
+        # Check if user is the author
+        if comment.author != request.user:
+            return Response(
+                {"error": "Only the author can delete this comment"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        # Check if comment is an eureka comment
+        post = comment.post
+        if post.eureka_comment == comment.id:
+            return Response(
+                {"error": "Cannot delete a eureka comment"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def upvote(self, request, pk=None):

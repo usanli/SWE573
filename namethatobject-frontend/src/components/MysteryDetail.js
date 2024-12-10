@@ -1,8 +1,9 @@
 ﻿import React, { useEffect, useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import Modal from "react-modal";
+import { handleAxiosError } from '../utils/errorHandler';
 
 const MysteryDetail = () => {
   const { id } = useParams();
@@ -19,11 +20,15 @@ const MysteryDetail = () => {
   const username = JSON.parse(localStorage.getItem("userData"))?.username;
   const [showEurekaSelection, setShowEurekaSelection] = useState(false);
   const [selectedEurekaComment, setSelectedEurekaComment] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const mysteryResponse = await axios.get(`${API_BASE_URL}/posts/${id}/`);
+        if (!mysteryResponse.data) {
+          throw new Error('404');
+        }
         setMystery(mysteryResponse.data);
 
         const commentsResponse = await axios.get(`${API_BASE_URL}/comments/`);
@@ -51,12 +56,18 @@ const MysteryDetail = () => {
 
         setComments(topLevelComments);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        if (error.message === '404') {
+          navigate('/error', { 
+            state: { error: 'The mystery you\'re looking for doesn\'t exist.' } 
+          });
+        } else {
+          handleAxiosError(error, navigate);
+        }
       }
     };
 
     fetchData();
-  }, [id]);
+  }, [id, navigate]);
 
   const handleVote = async (voteType) => {
     if (!isLoggedIn || !token) return;
@@ -270,6 +281,33 @@ const MysteryDetail = () => {
     });
   }, [comments, mystery?.eureka_comment]);
 
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE_URL}/comments/${commentId}/`, {
+        headers: { Authorization: `Token ${token}` }
+      });
+
+      // Update comments state to remove the deleted comment
+      setComments(prevComments => 
+        prevComments.filter(comment => {
+          // Remove the comment if it matches the deleted ID
+          if (comment.id === commentId) return false;
+          // If the comment has replies, check if any reply matches the deleted ID
+          if (comment.replies) {
+            comment.replies = comment.replies.filter(reply => reply.id !== commentId);
+          }
+          return true;
+        })
+      );
+    } catch (error) {
+      handleAxiosError(error, navigate);
+    }
+  };
+
   if (!mystery) {
     return <p>Loading...</p>;
   }
@@ -443,6 +481,22 @@ const MysteryDetail = () => {
             <h5 className="mb-3">Description</h5>
             <p className="lead">{mystery.description}</p>
           </div>
+
+          {mystery.parts_relation && (
+            <div className="parts-relation-section mt-4">
+              <div className="card bg-light">
+                <div className="card-body">
+                  <h5 className="mb-3">
+                    <i className="fas fa-puzzle-piece me-2"></i>
+                    Parts Relation
+                  </h5>
+                  <p className="mb-0" style={{ whiteSpace: 'pre-line' }}>
+                    {mystery.parts_relation}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -626,9 +680,20 @@ const MysteryDetail = () => {
                       </div>
                     )}
                   </div>
-                  <small className="text-muted">
-                    {new Date(comment.created_at).toLocaleString()}
-                  </small>
+                  <div className="d-flex align-items-center">
+                    <small className="text-muted me-3">
+                      {new Date(comment.created_at).toLocaleString()}
+                    </small>
+                    {isLoggedIn && comment.author?.username === username && 
+                     mystery.eureka_comment !== comment.id && (
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDeleteComment(comment.id)}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
                 <p className="mb-2">{comment.text}</p>
@@ -686,9 +751,20 @@ const MysteryDetail = () => {
                                 <strong>{reply.author?.username}</strong>
                               </div>
                             </Link>
-                            <small className="text-muted">
-                              {new Date(reply.created_at).toLocaleString()}
-                            </small>
+                            <div className="d-flex align-items-center">
+                              <small className="text-muted me-3">
+                                {new Date(reply.created_at).toLocaleString()}
+                              </small>
+                              {isLoggedIn && reply.author?.username === username && 
+                               mystery.eureka_comment !== reply.id && (
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDeleteComment(reply.id)}
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <p className="mb-2 mt-1">{reply.text}</p>
                           {isLoggedIn && (

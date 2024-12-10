@@ -17,6 +17,7 @@ class Post(models.Model):
     eureka_comment = models.IntegerField(null=True, blank=True)
     is_anonymous = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
+    parts_relation = models.TextField(blank=True, null=True)
 
     @property
     def points(self):

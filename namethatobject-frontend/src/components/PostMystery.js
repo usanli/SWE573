@@ -20,6 +20,7 @@ const PostMystery = () => {
   const [identificationSuggestions, setIdentificationSuggestions] = useState({});
   const [selectedIdentificationClues, setSelectedIdentificationClues] = useState({});
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [partsRelation, setPartsRelation] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
@@ -171,6 +172,7 @@ const PostMystery = () => {
     formData.append('title', title);
     formData.append('description', description);
     formData.append('is_anonymous', isAnonymous);
+    formData.append('parts_relation', partsRelation);
 
     // Format all tags into a single array with proper structure
     const allTags = [
@@ -294,6 +296,25 @@ const PostMystery = () => {
                 placeholder="Describe your mystery in detail..."
                 style={{ borderRadius: '10px' }}
               />
+            </div>
+
+            {/* Parts Relation Section */}
+            <div className="form-group mb-4">
+              <label className="form-label fw-bold">
+                <i className="fas fa-puzzle-piece me-2"></i>Parts Relation
+                <small className="text-muted ms-2">(Optional)</small>
+              </label>
+              <textarea
+                className="form-control"
+                value={partsRelation}
+                onChange={(e) => setPartsRelation(e.target.value)}
+                placeholder="If your mystery object has multiple parts, describe how they are related or connected to each other..."
+                rows="3"
+                style={{ borderRadius: '10px' }}
+              />
+              <small className="text-muted">
+                Example: "The smaller circular part fits into the larger square base."
+              </small>
             </div>
 
             {/* Mystery Attributes Section */}
