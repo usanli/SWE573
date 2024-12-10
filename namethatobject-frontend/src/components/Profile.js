@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 
 const Profile = () => {
@@ -25,10 +25,20 @@ const Profile = () => {
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [visiblePosts, setVisiblePosts] = useState(5);
   const [visibleComments, setVisibleComments] = useState(5);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const navigate = useNavigate();
 
   const loggedInUsername = JSON.parse(localStorage.getItem('userData'))?.username;
   const isOwnProfile = !profileUsername || profileUsername === loggedInUsername;
   const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    if (token) {
+      fetchAllData();
+    }
+  }, [profileUsername, token, loggedInUsername]);
+
   const badgeDescriptions = {
     first_post: 'Awarded for creating the first post.',
     commenter: 'Awarded for the first 10 comments.',
@@ -37,6 +47,29 @@ const Profile = () => {
     helper: 'Earned for answering 10+ questions marked as "Expert Answer."',
     anonymous_advocate: 'Making high-quality anonymous posts (10+ upvotes).',
   };
+
+  if (!token) {
+    return (
+      <div className="container mt-5">
+        <div className="card shadow-sm">
+          <div className="card-body text-center py-5">
+            <i className="fas fa-lock mb-3" style={{ fontSize: '48px', color: 'var(--primary-blue)' }}></i>
+            <h3 className="mb-3">Login Required</h3>
+            <p className="text-muted mb-4">
+              You need to be logged in to view user profiles.
+            </p>
+            <Link to="/signin" className="btn btn-primary">
+              Sign In
+            </Link>
+            <div className="mt-3">
+              <span className="text-muted">Don't have an account? </span>
+              <Link to="/signup">Sign Up</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -81,10 +114,6 @@ const Profile = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchAllData();
-  }, [profileUsername, token, loggedInUsername]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -165,6 +194,30 @@ const Profile = () => {
   const handleCloseModal = () => setSelectedBadge(null);
   const handleLoadMorePosts = () => setVisiblePosts(prev => prev + 5);
   const handleLoadMoreComments = () => setVisibleComments(prev => prev + 5);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== profileData.username) {
+      alert("Please enter your username correctly to confirm deletion");
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE_URL}/user/delete-account/`, {
+        headers: { Authorization: `Token ${token}` }
+      });
+
+      // Clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
+
+      // Show success message and redirect
+      alert('Your account has been successfully deleted');
+      navigate('/');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Error deleting account. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
@@ -520,6 +573,97 @@ const Profile = () => {
           </div>
         )}
       </Modal>
+
+      {isOwnProfile && (
+        <>
+          <div className="mt-4 pt-4 border-top">
+            <h5 className="text-danger mb-3">Danger Zone</h5>
+            <button 
+              className="btn btn-danger"
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Delete Account
+            </button>
+          </div>
+
+          <Modal
+            isOpen={showDeleteModal}
+            onRequestClose={() => setShowDeleteModal(false)}
+            contentLabel="Delete Account Confirmation"
+            className="modal-dialog modal-dialog-centered"
+            overlayClassName="modal-backdrop"
+            style={{
+              overlay: {
+                backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                zIndex: 1000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              },
+              content: {
+                position: 'relative',
+                top: 'auto',
+                left: 'auto',
+                right: 'auto',
+                bottom: 'auto',
+                border: 'none',
+                background: '#fff',
+                borderRadius: '8px',
+                padding: '20px',
+                maxWidth: '500px',
+                width: '90%'
+              }
+            }}
+          >
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">Delete Account</h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowDeleteModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warning">
+                  <strong>Warning:</strong>
+                  <ul className="mb-0">
+                    <li>This action cannot be undone</li>
+                    <li>Posts with comments will be anonymized</li>
+                    <li>Posts without comments will be deleted</li>
+                    <li>All your comments will be anonymized</li>
+                  </ul>
+                </div>
+                <p>Please type your username <strong>{profileData.username}</strong> to confirm:</p>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Enter your username"
+                />
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmation !== profileData.username}
+                >
+                  Delete Account
+                </button>
+              </div>
+            </div>
+          </Modal>
+        </>
+      )}
     </div>
   );
 };

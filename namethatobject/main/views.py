@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from .models import Post, Comment, UserProfile
 from .forms import CommentForm
 from .serializers import PostSerializer, CommentSerializer, UserSerializer, UserProfileSerializer
@@ -166,3 +166,35 @@ class UserProfileView(APIView):
                 {'message': str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_account(request):
+    try:
+        user = request.user
+        
+        # Get all user's posts
+        posts = Post.objects.filter(author=user)
+        
+        # Handle posts based on comments
+        for post in posts:
+            comment_count = Comment.objects.filter(post=post).count()
+            if comment_count > 0:
+                # If post has comments, mark as anonymous
+                post.anonymize()
+            else:
+                # If no comments, mark as deleted
+                post.is_deleted = True
+                post.save()
+
+        # Anonymize all comments
+        Comment.objects.filter(author=user).update(is_anonymous=True)
+        
+        # Delete the user
+        user.delete()
+        
+        return Response({"message": "Account successfully deleted"}, 
+                      status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, 
+                      status=status.HTTP_500_INTERNAL_SERVER_ERROR)

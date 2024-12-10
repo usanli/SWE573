@@ -10,6 +10,7 @@ import Signup from './components/Signup';
 import Signin from './components/Signin';
 import Profile from './components/Profile';
 import PostMystery from './components/PostMystery';
+import LogoutSuccess from './components/LogoutSuccess';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
@@ -30,6 +31,7 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route path="/post-mystery" element={<PostMystery />} />
+            <Route path="/logout-success" element={<LogoutSuccess />} />
           </Routes>
         </main>
         <Footer />  {/* Add Footer here */}

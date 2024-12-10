@@ -33,6 +33,11 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = ['id', 'title', 'description', 'image', 'video', 'audio', 'created_at', 'tags', 'author', 'points', 'upvotes', 'downvotes', 'eureka_comment', 'is_anonymous']
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.is_deleted:
+            return None
+        return representation
 
 class CommentSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)

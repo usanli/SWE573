@@ -64,10 +64,9 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userData');
-    localStorage.setItem('logoutMessage', 'You have successfully logged out.');
     setIsLoggedIn(false);
     setUsername('');
-    navigate('/');
+    navigate('/logout-success');
   };
 
   return (

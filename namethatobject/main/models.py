@@ -16,6 +16,7 @@ class Post(models.Model):
     downvotes = models.IntegerField(default=0)
     eureka_comment = models.IntegerField(null=True, blank=True)
     is_anonymous = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
 
     @property
     def points(self):
@@ -23,6 +24,10 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+
+    def anonymize(self):
+        self.is_anonymous = True
+        self.save()
 
 
 class Comment(models.Model):
@@ -40,6 +45,7 @@ class Comment(models.Model):
     upvotes = models.IntegerField(default=0)
     downvotes = models.IntegerField(default=0)
     tag = models.CharField(max_length=20, choices=TAG_CHOICES, default="Question")  # New field
+    is_anonymous = models.BooleanField(default=False)
 
     @property
     def points(self):
@@ -47,6 +53,10 @@ class Comment(models.Model):
 
     def __str__(self):
         return f'Comment by {self.author} on {self.post.title}'
+
+    def anonymize(self):
+        self.is_anonymous = True
+        self.save()
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
