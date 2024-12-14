@@ -1,7 +1,8 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL, MYSTERIES_ENDPOINT } from '../config';
+import { API_BASE_URL, MYSTERIES_ENDPOINT, getMediaUrl } from '../config';
+import { getProfilePicture } from '../utils/cloudinaryHelper';
 
 const SearchResults = () => {
   const location = useLocation();
@@ -173,19 +174,28 @@ const SearchResults = () => {
           <ul className="list-group">
             {results.slice(0, visibleCount).map((mystery) => (
               <li key={mystery.id} className="list-group-item d-flex align-items-center">
-                {mystery.image && (
+                <div className="search-result-item">
+                  {mystery.image && (
+                    <img
+                      src={getMediaUrl(mystery.image_url)}
+                      alt={mystery.title}
+                      className="search-result-image"
+                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                    />
+                  )}
+                  
+                  {/* Author profile picture */}
                   <img
-                    src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`}
-                    alt={mystery.title}
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                      marginRight: '15px',
-                    }}
+                    src={
+                      mystery.author?.profile_picture
+                        ? getProfilePicture(mystery.author)
+                        : `https://ui-avatars.com/api/?name=${mystery.author?.username || 'Anonymous'}&background=random&size=32`
+                    }
+                    alt={mystery.author?.username || 'Anonymous'}
+                    className="rounded-circle me-2"
+                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
                   />
-                )}
+                </div>
                 <div>
                   <h5>
                     <Link to={`/mystery/${mystery.id}`} className="text-decoration-none">

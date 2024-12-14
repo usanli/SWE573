@@ -23,6 +23,7 @@ const PostMystery = () => {
   const [partsRelation, setPartsRelation] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const mysteryAttributes = {
     Color: ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Brown', 'Purple', 'Orange', 'Pink', 'Gray', 'Multicolored'],
@@ -168,61 +169,98 @@ const PostMystery = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     const formData = new FormData();
+    
+    // Basic fields
     formData.append('title', title);
     formData.append('description', description);
     formData.append('is_anonymous', isAnonymous);
     formData.append('parts_relation', partsRelation);
 
-    // Format all tags into a single array with proper structure
+    // Media files with validation
+    if (image) {
+        if (image.size > 10 * 1024 * 1024) { // 10MB limit
+            alert('Image file is too large. Maximum size is 10MB.');
+            setIsSubmitting(false);
+            return;
+        }
+        console.log('Appending image:', image.name);
+        formData.append('image', image);
+    }
+    if (video) {
+        if (video.size > 50 * 1024 * 1024) { // 50MB limit
+            alert('Video file is too large. Maximum size is 50MB.');
+            setIsSubmitting(false);
+            return;
+        }
+        console.log('Appending video:', video.name);
+        formData.append('video', video);
+    }
+    if (audio) {
+        if (audio.size > 10 * 1024 * 1024) { // 10MB limit
+            alert('Audio file is too large. Maximum size is 10MB.');
+            setIsSubmitting(false);
+            return;
+        }
+        console.log('Appending audio:', audio.name);
+        formData.append('audio', audio);
+    }
+
+    // Format and append tags
     const allTags = [
-      // Add selected tags from tag search
-      ...selectedTags,
-      // Add selected mystery attributes with proper category as description
-      ...Object.entries(mysteryAttributes).flatMap(([category, attributes]) =>
-        selectedMysteryAttributes
-          .filter(attr => attributes.includes(attr))
-          .map(attr => ({
-            name: attr,
-            description: category, // Use the category as description
-            wikidata_id: null
-          }))
-      ),
-      // Add identification clues with their categories
-      ...Object.entries(selectedIdentificationClues).flatMap(([category, clues]) =>
-        clues.map(clue => ({
-          name: clue.name,
-          description: category,
-          wikidata_id: clue.wikidata_id || null
-        }))
-      )
+        ...selectedTags,
+        ...Object.entries(mysteryAttributes).flatMap(([category, attributes]) =>
+            selectedMysteryAttributes
+                .filter(attr => attributes.includes(attr))
+                .map(attr => ({
+                    name: attr,
+                    description: category,
+                    wikidata_id: null
+                }))
+        ),
+        ...Object.entries(selectedIdentificationClues).flatMap(([category, clues]) =>
+            clues.map(clue => ({
+                name: clue.name,
+                description: category,
+                wikidata_id: clue.wikidata_id || null
+            }))
+        )
     ];
 
-    // Convert tags array to string and append to formData
     formData.append('tags', JSON.stringify(allTags));
 
-    // Append media files if they exist
-    if (image) formData.append('image', image);
-    if (video) formData.append('video', video);
-    if (audio) formData.append('audio', audio);
-
     try {
-      const response = await axios.post(`${API_BASE_URL}/posts/`, formData, {
-        headers: {
-          Authorization: `Token ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      console.log('Post created:', response.data);
-      navigate(`/mystery/${response.data.id}`);
+        console.log('Submitting form data...');
+        const response = await axios.post(`${API_BASE_URL}/posts/`, formData, {
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                console.log('Upload progress:', percentCompleted);
+                // You can add a progress bar here if desired
+            }
+        });
+        console.log('Post created:', response.data);
+        navigate(`/mystery/${response.data.id}`);
     } catch (error) {
-      console.error('Error creating post:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        alert(`Error: ${JSON.stringify(error.response.data)}`);
-      } else {
-        alert('Error creating post. Please try again.');
-      }
+        console.error('Error creating post:', error);
+        console.error('Error response:', error.response?.data);
+        let errorMessage = 'Error creating post. ';
+        if (error.response?.data) {
+            if (typeof error.response.data === 'object') {
+                Object.entries(error.response.data).forEach(([key, value]) => {
+                    errorMessage += `${key}: ${value} `;
+                });
+            } else {
+                errorMessage += error.response.data;
+            }
+        }
+        alert(errorMessage);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -515,8 +553,16 @@ const PostMystery = () => {
               type="submit"
               className="btn btn-primary btn-lg w-100"
               style={{ borderRadius: '10px' }}
+              disabled={isSubmitting}
             >
-              Post Mystery
+              {isSubmitting ? (
+                  <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Uploading...
+                  </>
+              ) : (
+                  'Post Mystery'
+              )}
             </button>
           </form>
         </div>

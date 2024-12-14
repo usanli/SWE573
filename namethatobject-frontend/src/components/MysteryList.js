@@ -2,6 +2,7 @@
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { getProfilePicture } from '../utils/cloudinaryHelper';
 
 const MysteryList = ({ searchTerm }) => {
   const [mysteries, setMysteries] = useState([]);
@@ -126,7 +127,7 @@ const MysteryList = ({ searchTerm }) => {
                   <span className="text-success me-1">▲ {mystery.upvotes}</span>
                   <span className="text-danger">▼ {mystery.downvotes}</span>
                 </div>
-                {mystery.image && (
+                {mystery.image_url && (
                   <div 
                     style={{ 
                       height: '200px', 
@@ -137,17 +138,18 @@ const MysteryList = ({ searchTerm }) => {
                     onClick={() => navigate(`/mystery/${mystery.id}`)}
                   >
                     <img
-                      src={mystery.image.startsWith('http') ? mystery.image : `${API_BASE_URL}${mystery.image}`}
-                      className="card-img-top"
+                      src={mystery.image_url}
                       alt={mystery.title}
-                      style={{
-                        height: '100%',
+                      className="card-img-top"
+                      style={{ 
+                        height: '100%', 
                         width: '100%',
-                        objectFit: 'cover',
-                        transition: 'transform 0.3s ease'
+                        objectFit: 'cover'
                       }}
-                      onMouseOver={e => e.target.style.transform = 'scale(1.05)'}
-                      onMouseOut={e => e.target.style.transform = 'scale(1)'}
+                      onError={(e) => {
+                        console.error('Image failed to load:', mystery.image_url);
+                        e.target.style.display = 'none';
+                      }}
                     />
                   </div>
                 )}

@@ -2,6 +2,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
+import { getProfilePicture } from "../utils/cloudinaryHelper";
 import Modal from "react-modal";
 import { handleAxiosError } from '../utils/errorHandler';
 
@@ -362,10 +363,10 @@ const MysteryDetail = () => {
                     <img
                       src={
                         mystery.author?.profile_picture
-                          ? `${API_BASE_URL}${mystery.author.profile_picture}`
-                          : `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
+                          ? getProfilePicture(mystery.author)
+                          : `https://ui-avatars.com/api/?name=${mystery.author?.username || 'Anonymous'}&background=random&size=32`
                       }
-                      alt={mystery.author?.username}
+                      alt={mystery.author?.username || 'Anonymous'}
                       className="rounded-circle"
                       style={{ width: '32px', height: '32px' }}
                     />
@@ -405,70 +406,64 @@ const MysteryDetail = () => {
         <div className="card-body">
           <div className="media-gallery mb-4">
             <div className="row g-4">
-              {mystery.image && (
+              {mystery.image_url && (
                 <div className="col-md-6">
                   <div 
-                    className="media-container position-relative"
-                    onClick={() => openModal(mystery.image.startsWith("http") ? mystery.image : `${API_BASE_URL}${mystery.image}`)}
-                    style={{ cursor: 'pointer' }}
+                    className="media-container"
+                    onClick={() => {
+                      setSelectedMedia(mystery.image_url);
+                      setModalIsOpen(true);
+                    }}
                   >
                     <img
-                      src={mystery.image.startsWith("http") ? mystery.image : `${API_BASE_URL}${mystery.image}`}
+                      src={mystery.image_url}
                       alt={mystery.title}
                       className="rounded w-100"
-                      style={{ height: '300px', objectFit: 'cover' }}
+                      style={{ 
+                        maxHeight: '400px', 
+                        objectFit: 'contain',
+                        cursor: 'pointer'
+                      }}
+                      onError={(e) => {
+                        console.error('Image failed to load:', mystery.image_url);
+                        e.target.style.display = 'none';
+                      }}
                     />
-                    <div className="overlay-hover d-flex align-items-center justify-content-center">
-                      <i className="fas fa-search-plus text-white" style={{ fontSize: '24px' }}></i>
-                    </div>
                   </div>
                 </div>
               )}
-              {mystery.video && (
+              {mystery.video_url && (
                 <div className="col-md-6">
                   <div className="media-container">
-                    <video
-                      controls
-                      style={{
-                        width: "100%",
-                        height: "300px",
-                        objectFit: "cover",
-                        backgroundColor: "#000",
-                        borderRadius: "12px"
+                    <video 
+                      controls 
+                      className="w-100 rounded"
+                      style={{ maxHeight: '400px' }}
+                      onError={(e) => {
+                        console.error('Video failed to load:', mystery.video_url);
+                        e.target.style.display = 'none';
                       }}
                     >
-                      <source 
-                        src={mystery.video.startsWith("http") ? mystery.video : `${API_BASE_URL}${mystery.video}`}
-                        type="video/mp4"
-                      />
+                      <source src={mystery.video_url} type="video/mp4" />
                       Your browser does not support the video tag.
                     </video>
                   </div>
                 </div>
               )}
-              {mystery.audio && (
+              {mystery.audio_url && (
                 <div className="col-md-6">
                   <div className="media-item">
-                    <h5 className="mb-3">Audio</h5>
-                    <div
-                      className="media-container p-3"
-                      style={{
-                        backgroundColor: "#f8f9fa",
-                        borderRadius: "12px",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                    <audio 
+                      controls 
+                      className="w-100"
+                      onError={(e) => {
+                        console.error('Audio failed to load:', mystery.audio_url);
+                        e.target.style.display = 'none';
                       }}
                     >
-                      <audio
-                        controls
-                        style={{ width: "100%" }}
-                      >
-                        <source 
-                          src={mystery.audio.startsWith("http") ? mystery.audio : `${API_BASE_URL}${mystery.audio}`}
-                          type="audio/mpeg"
-                        />
-                        Your browser does not support the audio element.
-                      </audio>
-                    </div>
+                      <source src={mystery.audio_url} type="audio/mpeg" />
+                      Your browser does not support the audio element.
+                    </audio>
                   </div>
                 </div>
               )}
@@ -557,7 +552,7 @@ const MysteryDetail = () => {
                       <img
                         src={
                           comment.author?.profile_picture
-                            ? `${API_BASE_URL}${comment.author.profile_picture}`
+                            ? getProfilePicture(comment.author)
                             : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=24`
                         }
                         alt={comment.author?.username}
@@ -651,7 +646,7 @@ const MysteryDetail = () => {
                         <img
                           src={
                             comment.author?.profile_picture
-                              ? `${API_BASE_URL}${comment.author.profile_picture}`
+                              ? getProfilePicture(comment.author)
                               : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
                           }
                           alt={comment.author?.username}
@@ -741,7 +736,7 @@ const MysteryDetail = () => {
                                 <img
                                   src={
                                     reply.author?.profile_picture
-                                      ? `${API_BASE_URL}${reply.author.profile_picture}`
+                                      ? getProfilePicture(reply.author)
                                       : `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=24`
                                   }
                                   alt={reply.author?.username}

@@ -248,32 +248,51 @@ const Profile = () => {
               {/* Profile Picture Column */}
               <div className="col-md-3 text-center">
                 {isEditing ? (
-                  <div className="mb-3">
-                    <input
-                      type="file"
-                      className="form-control"
-                      onChange={handleImageChange}
-                      accept="image/*"
-                    />
-                    {previewImage && (
+                  <div className="position-relative">
+                    {previewImage ? (
                       <img
                         src={previewImage}
-                        alt="Preview"
-                        className="rounded-circle shadow mt-2"
+                        alt="Profile Preview"
+                        className="rounded-circle shadow"
                         style={{ width: '128px', height: '128px', objectFit: 'cover' }}
                       />
+                    ) : (
+                      <img
+                        src={profileData.profile_picture_url || `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`}
+                        alt="Profile"
+                        className="rounded-circle shadow"
+                        style={{ width: '128px', height: '128px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          console.error('Profile picture failed to load:', profileData.profile_picture_url);
+                          e.target.src = `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`;
+                        }}
+                      />
                     )}
+                    <label 
+                      htmlFor="profile-picture-input" 
+                      className="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <i className="fas fa-camera"></i>
+                    </label>
+                    <input
+                      id="profile-picture-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      style={{ display: 'none' }}
+                    />
                   </div>
                 ) : (
                   <img
-                    src={
-                      profileData.profile_picture
-                        ? `${API_BASE_URL}${profileData.profile_picture}`
-                        : `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`
-                    }
+                    src={profileData.profile_picture_url || `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`}
                     alt="Profile"
                     className="rounded-circle shadow"
                     style={{ width: '128px', height: '128px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      console.error('Profile picture failed to load:', profileData.profile_picture_url);
+                      e.target.src = `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`;
+                    }}
                   />
                 )}
               </div>
@@ -437,7 +456,9 @@ const Profile = () => {
                     <img
                       src={
                         post.author?.profile_picture
-                          ? `${API_BASE_URL}${post.author.profile_picture}`
+                          ? post.author.profile_picture.startsWith('http')
+                            ? post.author.profile_picture
+                            : `https://res.cloudinary.com/dbrvvzoys/image/upload/${post.author.profile_picture}`
                           : `https://ui-avatars.com/api/?name=${post.author?.username}&background=random&size=32`
                       }
                       alt={post.author?.username}
@@ -486,7 +507,9 @@ const Profile = () => {
                     <img
                       src={
                         comment.author?.profile_picture
-                          ? `${API_BASE_URL}${comment.author.profile_picture}`
+                          ? comment.author.profile_picture.startsWith('http')
+                            ? comment.author.profile_picture
+                            : `https://res.cloudinary.com/dbrvvzoys/image/upload/${comment.author.profile_picture}`
                           : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
                       }
                       alt={comment.author?.username}
