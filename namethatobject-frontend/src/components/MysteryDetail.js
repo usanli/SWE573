@@ -438,9 +438,6 @@ const MysteryDetail = () => {
 
       <div className="card shadow-sm mb-4">
         <div className="card-body">
-          <div className="description mb-4">
-            <p>{mystery.description}</p>
-          </div>
 
           {/* Media section - only for image */}
           {mystery.image_url && (
