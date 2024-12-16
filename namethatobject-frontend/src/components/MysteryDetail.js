@@ -2,7 +2,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
-import { getProfilePicture } from "../utils/cloudinaryHelper";
+import { getCloudinaryUrl } from '../utils/cloudinary';
 import Modal from "react-modal";
 import { handleAxiosError } from '../utils/errorHandler';
 
@@ -15,7 +15,7 @@ const MysteryDetail = () => {
   const [replyCommentId, setReplyCommentId] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState("");
+  const [selectedImage, setSelectedImage] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const token = localStorage.getItem("token");
   const username = JSON.parse(localStorage.getItem("userData"))?.username;
@@ -262,13 +262,13 @@ const MysteryDetail = () => {
     );
 
   const openModal = (media) => {
-    setSelectedMedia(media);
+    setSelectedImage(media);
     setModalIsOpen(true);
   };
 
   const closeModal = () => {
     setModalIsOpen(false);
-    setSelectedMedia("");
+    setSelectedImage("");
   };
 
   const sortedComments = useMemo(() => {
@@ -309,6 +309,26 @@ const MysteryDetail = () => {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!window.confirm('Are you sure you want to delete this post?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE_URL}/posts/${id}/`, {
+        headers: { Authorization: `Token ${token}` }
+      });
+      navigate('/'); // Redirect to home page after deletion
+    } catch (error) {
+      if (error.response?.data?.error) {
+        // Show the specific error message from the backend
+        alert(error.response.data.error);
+      } else {
+        alert("Error deleting the post. Please try again.");
+      }
+    }
+  };
+
   if (!mystery) {
     return <p>Loading...</p>;
   }
@@ -323,25 +343,21 @@ const MysteryDetail = () => {
             <div className="col-auto">
               <div className="voting-section d-flex flex-column align-items-center">
                 <button
-                  className="btn btn-link p-0"
+                  className="btn btn-sm btn-outline-success"
                   onClick={() => handleVote("upvote")}
                   disabled={!isLoggedIn}
                 >
-                  <i className="fas fa-arrow-up text-success" style={{ fontSize: '24px' }}></i>
+                  ▲ {mystery.upvotes || 0}
                 </button>
-                <span className="vote-count my-2" style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                  {mystery.upvotes - mystery.downvotes}
-                </span>
                 <button
-                  className="btn btn-link p-0"
+                  className="btn btn-sm btn-outline-danger"
                   onClick={() => handleVote("downvote")}
                   disabled={!isLoggedIn}
                 >
-                  <i className="fas fa-arrow-down text-danger" style={{ fontSize: '24px' }}></i>
+                  ▼ {mystery.downvotes || 0}
                 </button>
               </div>
             </div>
-
             <div className="col">
               <h1 className="mb-3">{mystery.title}</h1>
               <div className="d-flex align-items-center">
@@ -362,13 +378,16 @@ const MysteryDetail = () => {
                   >
                     <img
                       src={
-                        mystery.author?.profile_picture
-                          ? getProfilePicture(mystery.author)
-                          : `https://ui-avatars.com/api/?name=${mystery.author?.username || 'Anonymous'}&background=random&size=32`
+                        mystery.is_anonymous
+                          ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
+                          : getCloudinaryUrl(mystery.author?.profile_picture) || `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
                       }
-                      alt={mystery.author?.username || 'Anonymous'}
+                      alt={mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}
                       className="rounded-circle"
-                      style={{ width: '32px', height: '32px' }}
+                      style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}&background=random&size=32`;
+                      }}
                     />
                     <span className="ms-2 text-primary">{mystery.author?.username}</span>
                   </Link>
@@ -376,13 +395,28 @@ const MysteryDetail = () => {
                 <span className="text-muted">
                   • {new Date(mystery.created_at).toLocaleString()}
                 </span>
-                {!isSolved && isLoggedIn && mystery.author?.username === username && (
-                  <button
-                    className="btn btn-success btn-sm ms-auto"
-                    onClick={handleMarkSolved}
-                  >
-                    Mark as Solved
-                  </button>
+                {isLoggedIn && mystery.author?.username === username && (
+                  <div className="ms-auto btn-group">
+                    {!isSolved && (
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={handleMarkSolved}
+                      >
+                        <i className="fas fa-check-circle me-1"></i>
+                        Mark as Solved
+                      </button>
+                    )}
+                    {comments.length === 0 && (
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={handleDeletePost}
+                        title={comments.length > 0 ? "Posts with comments cannot be deleted" : "Delete this post"}
+                      >
+                        <i className="fas fa-trash me-1"></i>
+                        Delete Post
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -404,71 +438,66 @@ const MysteryDetail = () => {
 
       <div className="card shadow-sm mb-4">
         <div className="card-body">
-          <div className="media-gallery mb-4">
-            <div className="row g-4">
-              {mystery.image_url && (
-                <div className="col-md-6">
-                  <div 
-                    className="media-container"
-                    onClick={() => {
-                      setSelectedMedia(mystery.image_url);
-                      setModalIsOpen(true);
-                    }}
-                  >
-                    <img
-                      src={mystery.image_url}
-                      alt={mystery.title}
-                      className="rounded w-100"
-                      style={{ 
-                        maxHeight: '400px', 
-                        objectFit: 'contain',
-                        cursor: 'pointer'
-                      }}
-                      onError={(e) => {
-                        console.error('Image failed to load:', mystery.image_url);
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-              {mystery.video_url && (
-                <div className="col-md-6">
-                  <div className="media-container">
-                    <video 
-                      controls 
-                      className="w-100 rounded"
-                      style={{ maxHeight: '400px' }}
-                      onError={(e) => {
-                        console.error('Video failed to load:', mystery.video_url);
-                        e.target.style.display = 'none';
-                      }}
-                    >
-                      <source src={mystery.video_url} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                </div>
-              )}
-              {mystery.audio_url && (
-                <div className="col-md-6">
-                  <div className="media-item">
-                    <audio 
-                      controls 
-                      className="w-100"
-                      onError={(e) => {
-                        console.error('Audio failed to load:', mystery.audio_url);
-                        e.target.style.display = 'none';
-                      }}
-                    >
-                      <source src={mystery.audio_url} type="audio/mpeg" />
-                      Your browser does not support the audio element.
-                    </audio>
-                  </div>
-                </div>
-              )}
-            </div>
+          <div className="description mb-4">
+            <p>{mystery.description}</p>
           </div>
+
+          {/* Media section - only for image */}
+          {mystery.image_url && (
+            <div className="media-container position-relative mb-4">
+              <img
+                src={mystery.image_url}
+                alt={mystery.title}
+                className="img-fluid w-100"
+                style={{ cursor: 'pointer' }}
+                onClick={() => openModal(mystery.image_url)}
+              />
+            </div>
+          )}
+
+          {/* Image Modal */}
+          <Modal
+            isOpen={modalIsOpen}
+            onRequestClose={() => setModalIsOpen(false)}
+            style={{
+              content: {
+                top: '50%',
+                left: '50%',
+                right: 'auto',
+                bottom: 'auto',
+                marginRight: '-50%',
+                transform: 'translate(-50%, -50%)',
+                padding: '0',
+                border: 'none',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                backgroundColor: 'transparent'
+              },
+              overlay: {
+                backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                zIndex: 1000
+              }
+            }}
+          >
+            <img
+              src={selectedImage}
+              alt="Full size"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                objectFit: 'contain'
+              }}
+            />
+            <button
+              onClick={() => setModalIsOpen(false)}
+              className="btn btn-dark position-absolute"
+              style={{ top: '10px', right: '10px' }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </Modal>
 
           {renderTags()}
 
@@ -548,18 +577,35 @@ const MysteryDetail = () => {
               >
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start">
-                    <div className="d-flex align-items-center">
-                      <img
-                        src={
-                          comment.author?.profile_picture
-                            ? getProfilePicture(comment.author)
-                            : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=24`
-                        }
-                        alt={comment.author?.username}
-                        className="rounded-circle me-2"
-                        style={{ width: '24px', height: '24px' }}
-                      />
-                      <strong>{comment.author?.username}</strong>
+                    <div className="d-flex align-items-center mb-2">
+                      {comment.is_anonymous ? (
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={`https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`}
+                            alt="Anonymous"
+                            className="rounded-circle me-2"
+                            style={{ width: '32px', height: '32px' }}
+                          />
+                          <span className="text-muted">Anonymous</span>
+                        </div>
+                      ) : (
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={
+                              comment.is_anonymous
+                                ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
+                                : getCloudinaryUrl(comment.author?.profile_picture) || `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
+                            }
+                            alt={comment.is_anonymous ? 'Anonymous' : comment.author?.username}
+                            className="rounded-circle me-2"
+                            style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.src = `https://ui-avatars.com/api/?name=${comment.is_anonymous ? 'Anonymous' : comment.author?.username}&background=random&size=32`;
+                            }}
+                          />
+                          <span>{comment.is_anonymous ? 'Anonymous' : comment.author?.username}</span>
+                        </div>
+                      )}
                     </div>
                     <small className="text-muted">
                       {new Date(comment.created_at).toLocaleString()}
@@ -646,12 +692,15 @@ const MysteryDetail = () => {
                         <img
                           src={
                             comment.author?.profile_picture
-                              ? getProfilePicture(comment.author)
+                              ? getCloudinaryUrl(comment.author?.profile_picture) || `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
                               : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
                           }
-                          alt={comment.author?.username}
+                          alt={comment.is_anonymous ? 'Anonymous' : comment.author?.username}
                           className="rounded-circle me-2"
-                          style={{ width: '32px', height: '32px' }}
+                          style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.src = `https://ui-avatars.com/api/?name=${comment.is_anonymous ? 'Anonymous' : comment.author?.username}&background=random&size=32`;
+                          }}
                         />
                         <h6 className="mb-1">{comment.author?.username}</h6>
                       </div>
@@ -736,12 +785,15 @@ const MysteryDetail = () => {
                                 <img
                                   src={
                                     reply.author?.profile_picture
-                                      ? getProfilePicture(reply.author)
-                                      : `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=24`
+                                      ? getCloudinaryUrl(reply.author?.profile_picture) || `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=32`
+                                      : `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=32`
                                   }
-                                  alt={reply.author?.username}
+                                  alt={reply.is_anonymous ? 'Anonymous' : reply.author?.username}
                                   className="rounded-circle me-2"
-                                  style={{ width: '24px', height: '24px' }}
+                                  style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = `https://ui-avatars.com/api/?name=${reply.is_anonymous ? 'Anonymous' : reply.author?.username}&background=random&size=32`;
+                                  }}
                                 />
                                 <strong>{reply.author?.username}</strong>
                               </div>
@@ -820,67 +872,6 @@ const MysteryDetail = () => {
           ))}
         </div>
       </div>
-
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={closeModal}
-        contentLabel="Media Modal"
-        ariaHideApp={false}
-        style={{
-          overlay: {
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            zIndex: 1000
-          },
-          content: {
-            top: '50%',
-            left: '50%',
-            right: 'auto',
-            bottom: 'auto',
-            marginRight: '-50%',
-            transform: 'translate(-50%, -50%)',
-            maxWidth: '90%',
-            maxHeight: '90%',
-            padding: '20px',
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            border: 'none'
-          }
-        }}
-      >
-        <button
-          onClick={closeModal}
-          className="btn btn-link position-absolute"
-          style={{
-            top: '10px',
-            right: '10px',
-            fontSize: '24px',
-            color: '#000',
-            textDecoration: 'none'
-          }}
-        >
-          ×
-        </button>
-        <div className="modal-content text-center">
-          {selectedMedia && (
-            selectedMedia.endsWith('.mp4') || selectedMedia.endsWith('.webm') ? (
-              <video
-                controls
-                autoPlay
-                style={{ maxWidth: '100%', maxHeight: '80vh' }}
-              >
-                <source src={selectedMedia} />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <img
-                src={selectedMedia}
-                alt="Full Size"
-                style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-              />
-            )
-          )}
-        </div>
-      </Modal>
 
       <style>
         {`

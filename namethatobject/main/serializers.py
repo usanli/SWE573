@@ -2,14 +2,35 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Post, Comment, UserProfile
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile_picture_url = serializers.URLField(read_only=True)
+    
+    class Meta:
+        model = UserProfile
+        fields = ['bio', 'profession', 'profile_picture', 'profile_picture_url']
+
+    def update(self, instance, validated_data):
+        print("Profile update method called with data:", validated_data)
+        if 'profile_picture' in validated_data:
+            instance.profile_picture = validated_data.get('profile_picture')
+            # Force URL update
+            instance.profile_picture_url = None
+            print(f"New profile picture assigned: {instance.profile_picture}")
+        instance.bio = validated_data.get('bio', instance.bio)
+        instance.profession = validated_data.get('profession', instance.profession)
+        instance.save()
+        print(f"After save - Profile Picture URL: {instance.profile_picture_url}")
+        return instance
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     email = serializers.EmailField(write_only=True, required=True)
+    profile = UserProfileSerializer(read_only=True)
     profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'email', 'profile_picture']
+        fields = ['id', 'username', 'password', 'email', 'profile', 'profile_picture']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -72,8 +93,8 @@ class PostSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Post
-        fields = ['id', 'title', 'description', 'image', 'video', 'audio',
-                 'image_url', 'video_url', 'audio_url', 'created_at', 'tags',
+        fields = ['id', 'title', 'description', 'image',
+                 'image_url', 'created_at', 'tags',
                  'author', 'upvotes', 'downvotes', 'eureka_comment',
                  'is_anonymous', 'parts_relation']
 
@@ -85,15 +106,8 @@ class PostSerializer(serializers.ModelSerializer):
         print("Update method called with data:", validated_data)
         if 'image' in validated_data:
             instance.image = validated_data.get('image')
-            # Force URL update
             instance.image_url = None
             print(f"New image assigned: {instance.image}")
-        if 'video' in validated_data:
-            instance.video = validated_data.get('video')
-            instance.video_url = None
-        if 'audio' in validated_data:
-            instance.audio = validated_data.get('audio')
-            instance.audio_url = None
         
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
@@ -125,33 +139,3 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'post', 'text', 'created_at', 'author', 'parent', 'replies', 'points', 'upvotes', 'downvotes', 'tag']
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    email = serializers.EmailField(source='user.email', read_only=True)
-    profile_picture_url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = UserProfile
-        fields = ['username', 'email', 'bio', 'profession', 'profile_picture', 'profile_picture_url']
-        extra_kwargs = {
-            'profile_picture': {'required': False},
-            'bio': {'required': False},
-            'profession': {'required': False},
-        }
-
-    def update(self, instance, validated_data):
-        print("Profile update method called with data:", validated_data)
-        if 'profile_picture' in validated_data:
-            instance.profile_picture = validated_data.get('profile_picture')
-            # Force URL update
-            instance.profile_picture_url = None
-            print(f"New profile picture assigned: {instance.profile_picture}")
-        instance.bio = validated_data.get('bio', instance.bio)
-        instance.profession = validated_data.get('profession', instance.profession)
-        instance.save()
-        print(f"After save - Profile Picture URL: {instance.profile_picture_url}")
-        return instance
-
-    def get_profile_picture_url(self, obj):
-        return obj.profile_picture_url if obj.profile_picture_url else None

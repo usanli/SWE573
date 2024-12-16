@@ -9,6 +9,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from .models import Post, Comment, UserProfile
 from .forms import CommentForm
 from .serializers import PostSerializer, CommentSerializer, UserSerializer, UserProfileSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
 
 def post_list(request):
     posts = Post.objects.all()
@@ -76,6 +77,25 @@ class PostViewSet(viewsets.ModelViewSet):
         post.downvotes += 1
         post.save()
         return Response({'points': post.points, 'upvotes': post.upvotes, 'downvotes': post.downvotes}, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        post = self.get_object()
+
+        # Check if user is the author
+        if post.author != request.user:
+            return Response(
+                {"error": "Only the author can delete this post"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Check if the post has comments
+        if post.comments.exists():
+            return Response(
+                {"error": "Cannot delete a post with comments"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -154,37 +174,35 @@ class SignUpView(APIView):
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
 
     def get(self, request, username=None):
-        try:
-            if username:
-                user = get_object_or_404(User, username=username)
-                profile = get_object_or_404(UserProfile, user=user)
-            else:
-                profile = get_object_or_404(UserProfile, user=request.user)
-            
-            serializer = UserProfileSerializer(profile)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response(
-                {'message': str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        if username:
+            user = get_object_or_404(User, username=username)
+        else:
+            user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
 
     def patch(self, request):
         try:
-            profile = get_object_or_404(UserProfile, user=request.user)
+            profile = request.user.profile
             serializer = UserProfileSerializer(profile, data=request.data, partial=True)
-            
             if serializer.is_valid():
+                print("Valid data:", serializer.validated_data)  # Debug print
                 serializer.save()
                 return Response(serializer.data)
+            print("Invalid data:", serializer.errors)  # Debug print
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response(
-                {'message': str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            print(f"Error updating profile: {str(e)}")
+            import traceback
+            print(traceback.format_exc())  # Print full traceback
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request):
+        # Add this method to handle PUT requests as well
+        return self.patch(request)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

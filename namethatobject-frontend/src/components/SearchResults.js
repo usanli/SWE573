@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, MYSTERIES_ENDPOINT, getMediaUrl } from '../config';
-import { getProfilePicture } from '../utils/cloudinaryHelper';
+import { getCloudinaryUrl } from '../utils/cloudinary';
 
 const SearchResults = () => {
   const location = useLocation();
@@ -173,65 +173,91 @@ const SearchResults = () => {
         <>
           <ul className="list-group">
             {results.slice(0, visibleCount).map((mystery) => (
-              <li key={mystery.id} className="list-group-item d-flex align-items-center">
-                <div className="search-result-item">
-                  {mystery.image && (
-                    <img
-                      src={getMediaUrl(mystery.image_url)}
-                      alt={mystery.title}
-                      className="search-result-image"
-                      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                    />
-                  )}
-                  
-                  {/* Author profile picture */}
-                  <img
-                    src={
-                      mystery.author?.profile_picture
-                        ? getProfilePicture(mystery.author)
-                        : `https://ui-avatars.com/api/?name=${mystery.author?.username || 'Anonymous'}&background=random&size=32`
-                    }
-                    alt={mystery.author?.username || 'Anonymous'}
-                    className="rounded-circle me-2"
-                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                  />
-                </div>
-                <div>
-                  <h5>
-                    <Link to={`/mystery/${mystery.id}`} className="text-decoration-none">
-                      {mystery.title}
-                    </Link>
-                  </h5>
-                  <p>{mystery.description}</p>
-                  <div className="d-flex align-items-center mb-2">
-                    {mystery.is_anonymous ? (
-                      <span className="text-muted">
-                        <i className="fas fa-user-secret me-1"></i>
-                        Anonymous
-                      </span>
-                    ) : (
-                      <Link 
-                        to={`/profile/${mystery.author?.username}`}
-                        className="text-decoration-none text-muted"
-                      >
-                        <i className="fas fa-user me-1"></i>
-                        {mystery.author?.username}
-                      </Link>
+              <li key={mystery.id} className="list-group-item">
+                <div className="row align-items-center">
+                  {/* Left column for images */}
+                  <div className="col-auto">
+                    {mystery.image && (
+                      <img
+                        src={getMediaUrl(mystery.image_url)}
+                        alt={mystery.title}
+                        className="search-result-image mb-2"
+                        style={{ 
+                          width: '100px', 
+                          height: '100px', 
+                          objectFit: 'cover',
+                          borderRadius: '8px'
+                        }}
+                      />
                     )}
-                    <span className="mx-2">•</span>
-                    <small className="text-muted">
-                      {new Date(mystery.created_at).toLocaleString()}
-                    </small>
                   </div>
-                  {mystery.tags && (
-                    <div className="tags mt-2">
-                      {mystery.tags.map((tag, index) => (
-                        <span key={index} className="badge me-1">
-                          {tag.name}
-                        </span>
-                      ))}
+
+                  {/* Right column for content */}
+                  <div className="col">
+                    {/* Author info row */}
+                    <div className="d-flex align-items-center mb-2">
+                      {mystery.is_anonymous ? (
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={`https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`}
+                            alt="Anonymous"
+                            className="rounded-circle me-2"
+                            style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                          />
+                          <span className="text-muted">Anonymous</span>
+                        </div>
+                      ) : (
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={
+                              mystery.is_anonymous
+                                ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
+                                : getCloudinaryUrl(mystery.author?.profile_picture) || `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
+                            }
+                            alt={mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}
+                            className="rounded-circle me-2"
+                            style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.src = `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`;
+                            }}
+                          />
+                          <Link to={`/profile/${mystery.author?.username}`} className="text-decoration-none">
+                            <span>{mystery.author?.username}</span>
+                          </Link>
+                        </div>
+                      )}
+                      <span className="text-muted ms-2">
+                        • {new Date(mystery.created_at).toLocaleString()}
+                      </span>
                     </div>
-                  )}
+
+                    {/* Title and description */}
+                    <h5 className="mb-2">
+                      <Link to={`/mystery/${mystery.id}`} className="text-decoration-none">
+                        {mystery.title}
+                      </Link>
+                    </h5>
+                    <p className="mb-2">{mystery.description}</p>
+
+                    {/* Tags */}
+                    {mystery.tags && (
+                      <div className="tags">
+                        {mystery.tags.map((tag, index) => (
+                          <span 
+                            key={index} 
+                            className="badge bg-light text-dark me-1"
+                            style={{ 
+                              padding: '5px 10px',
+                              borderRadius: '15px',
+                              border: '1px solid #dee2e6'
+                            }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}

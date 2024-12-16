@@ -116,21 +116,17 @@ class Comment(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    bio = models.TextField(blank=True, null=True)
-    profession = models.CharField(max_length=100, blank=True, null=True)
     profile_picture = CloudinaryField('image', folder='profile_pictures', blank=True, null=True)
     profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.user.username}'s Profile"
+    bio = models.TextField(blank=True)
+    profession = models.CharField(max_length=100, blank=True)
 
     def save(self, *args, **kwargs):
         try:
-            if self.profile_picture:
-                # Get the direct Cloudinary URL
-                cloudinary_url = f"https://res.cloudinary.com/dbrvvzoys/image/upload/{self.profile_picture.public_id}"
-                self.profile_picture_url = cloudinary_url
-                print(f"Profile picture URL set to: {cloudinary_url}")  # Debug log
+            if self.profile_picture and not self.profile_picture_url:
+                # Get the URL from Cloudinary
+                self.profile_picture_url = self.profile_picture.url
+                print(f"Profile picture URL set to: {self.profile_picture_url}")  # Debug log
         except Exception as e:
             print(f"Error setting profile picture URL: {e}")
             import traceback

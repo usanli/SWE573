@@ -148,9 +148,11 @@ if DEBUG:
                 'class': 'logging.StreamHandler',
             },
         },
-        'root': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
+        'loggers': {
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+            },
         },
     }
 

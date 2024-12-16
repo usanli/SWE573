@@ -4,15 +4,23 @@ import { API_BASE_URL } from '../config';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 
+const getCloudinaryUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `https://res.cloudinary.com/dbrvvzoys/${path}`;
+};
+
 const Profile = () => {
   const { username: profileUsername } = useParams();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     username: '',
     email: '',
-    bio: '',
-    profession: '',
-    profile_picture: null
+    profile: {
+      bio: '',
+      profession: '',
+      profile_picture: null
+    }
   });
   const [userPosts, setUserPosts] = useState([]);
   const [userComments, setUserComments] = useState([]);
@@ -83,25 +91,42 @@ const Profile = () => {
       const profileResponse = await axios.get(endpoint, {
         headers: { Authorization: `Token ${token}` }
       });
+
+      // Update profile data
       setProfileData(profileResponse.data);
 
-      // Fetch posts
+      // Fetch and update posts with the latest profile data
       const postsResponse = await axios.get(`${API_BASE_URL}/posts/`);
       const userSpecificPosts = postsResponse.data
         .filter(post => 
           post.author?.username === (profileUsername || loggedInUsername) && 
           !post.is_anonymous
         )
+        .map(post => ({
+          ...post,
+          author: {
+            ...post.author,
+            profile_picture: profileResponse.data.profile?.profile_picture
+          }
+        }))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setUserPosts(userSpecificPosts);
 
-      // Fetch comments
+      // Fetch and update comments with the latest profile data
       const commentsResponse = await axios.get(`${API_BASE_URL}/comments/`);
       const userSpecificComments = commentsResponse.data
         .filter(comment => comment.author?.username === (profileUsername || loggedInUsername))
+        .map(comment => ({
+          ...comment,
+          author: {
+            ...comment.author,
+            profile_picture: profileResponse.data.profile?.profile_picture
+          }
+        }))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setUserComments(userSpecificComments);
 
+      // Calculate and update points, rank, and badges
       const calculatedPoints = calculatePoints(userSpecificPosts, userSpecificComments);
       setPoints(calculatedPoints);
       setRank(calculateRank(calculatedPoints));
@@ -119,7 +144,10 @@ const Profile = () => {
     const { name, value } = e.target;
     setProfileData(prev => ({
       ...prev,
-      [name]: value
+      profile: {
+        ...prev.profile,
+        [name]: value
+      }
     }));
   };
 
@@ -128,7 +156,10 @@ const Profile = () => {
     if (file) {
       setProfileData(prev => ({
         ...prev,
-        profile_picture: file
+        profile: {
+          ...prev.profile,
+          profile_picture: file
+        }
       }));
       setPreviewImage(URL.createObjectURL(file));
     }
@@ -138,10 +169,10 @@ const Profile = () => {
     e.preventDefault();
     const formData = new FormData();
     
-    formData.append('bio', profileData.bio);
-    formData.append('profession', profileData.profession);
-    if (profileData.profile_picture instanceof File) {
-      formData.append('profile_picture', profileData.profile_picture);
+    formData.append('bio', profileData.profile?.bio || '');
+    formData.append('profession', profileData.profile?.profession || '');
+    if (profileData.profile?.profile_picture instanceof File) {
+      formData.append('profile_picture', profileData.profile.profile_picture);
     }
 
     try {
@@ -151,10 +182,17 @@ const Profile = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
+
+      // First set editing to false and clear preview
       setIsEditing(false);
-      fetchAllData();
+      setPreviewImage(null);
+
+      // Then fetch fresh data
+      await fetchAllData();
+
     } catch (error) {
       console.error('Error updating profile:', error);
+      alert('Error updating profile. Please try again.');
     }
   };
 
@@ -258,12 +296,12 @@ const Profile = () => {
                       />
                     ) : (
                       <img
-                        src={profileData.profile_picture_url || `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`}
+                        src={getCloudinaryUrl(profileData.profile?.profile_picture) || `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`}
                         alt="Profile"
                         className="rounded-circle shadow"
                         style={{ width: '128px', height: '128px', objectFit: 'cover' }}
                         onError={(e) => {
-                          console.error('Profile picture failed to load:', profileData.profile_picture_url);
+                          console.error('Profile picture failed to load:', profileData.profile?.profile_picture);
                           e.target.src = `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`;
                         }}
                       />
@@ -285,12 +323,12 @@ const Profile = () => {
                   </div>
                 ) : (
                   <img
-                    src={profileData.profile_picture_url || `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`}
+                    src={getCloudinaryUrl(profileData.profile?.profile_picture) || `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`}
                     alt="Profile"
                     className="rounded-circle shadow"
                     style={{ width: '128px', height: '128px', objectFit: 'cover' }}
                     onError={(e) => {
-                      console.error('Profile picture failed to load:', profileData.profile_picture_url);
+                      console.error('Profile picture failed to load:', profileData.profile?.profile_picture);
                       e.target.src = `https://ui-avatars.com/api/?name=${profileData.username}&background=random&size=128`;
                     }}
                   />
@@ -306,7 +344,7 @@ const Profile = () => {
                       <textarea
                         name="bio"
                         className="form-control"
-                        value={profileData.bio || ''}
+                        value={profileData.profile?.bio || ''}
                         onChange={handleInputChange}
                         rows="3"
                       />
@@ -317,7 +355,7 @@ const Profile = () => {
                         type="text"
                         name="profession"
                         className="form-control"
-                        value={profileData.profession || ''}
+                        value={profileData.profile?.profession || ''}
                         onChange={handleInputChange}
                       />
                     </div>
@@ -335,11 +373,11 @@ const Profile = () => {
                 ) : (
                   <div className="profile-info">
                     <h3 className="mb-2">{profileData.username}</h3>
-                    {profileData.profession && (
-                      <p className="text-muted mb-2">{profileData.profession}</p>
+                    {profileData.profile?.profession && (
+                      <p className="text-muted mb-2">{profileData.profile.profession}</p>
                     )}
-                    {profileData.bio && (
-                      <p className="mb-3">{profileData.bio}</p>
+                    {profileData.profile?.bio && (
+                      <p className="mb-3">{profileData.profile.bio}</p>
                     )}
                     {isOwnProfile && (
                       <button 
@@ -456,14 +494,15 @@ const Profile = () => {
                     <img
                       src={
                         post.author?.profile_picture
-                          ? post.author.profile_picture.startsWith('http')
-                            ? post.author.profile_picture
-                            : `https://res.cloudinary.com/dbrvvzoys/image/upload/${post.author.profile_picture}`
+                          ? getCloudinaryUrl(post.author.profile_picture)
                           : `https://ui-avatars.com/api/?name=${post.author?.username}&background=random&size=32`
                       }
                       alt={post.author?.username}
                       className="rounded-circle me-2"
                       style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${post.author?.username}&background=random&size=32`;
+                      }}
                     />
                     <div>
                       <h6 className="mb-0">
@@ -507,14 +546,15 @@ const Profile = () => {
                     <img
                       src={
                         comment.author?.profile_picture
-                          ? comment.author.profile_picture.startsWith('http')
-                            ? comment.author.profile_picture
-                            : `https://res.cloudinary.com/dbrvvzoys/image/upload/${comment.author.profile_picture}`
+                          ? getCloudinaryUrl(comment.author.profile_picture)
                           : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
                       }
                       alt={comment.author?.username}
                       className="rounded-circle me-2"
                       style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`;
+                      }}
                     />
                     <div>
                       <p className="mb-1">{comment.text}</p>

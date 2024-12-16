@@ -11,8 +11,6 @@ const PostMystery = () => {
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [image, setImage] = useState(null);
-  const [video, setVideo] = useState(null);
-  const [audio, setAudio] = useState(null);
   const [showMysteryAttributes, setShowMysteryAttributes] = useState(false);
   const [selectedMysteryAttributes, setSelectedMysteryAttributes] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState([]);
@@ -178,7 +176,7 @@ const PostMystery = () => {
     formData.append('is_anonymous', isAnonymous);
     formData.append('parts_relation', partsRelation);
 
-    // Media files with validation
+    // Only handle image upload
     if (image) {
         if (image.size > 10 * 1024 * 1024) { // 10MB limit
             alert('Image file is too large. Maximum size is 10MB.');
@@ -187,24 +185,6 @@ const PostMystery = () => {
         }
         console.log('Appending image:', image.name);
         formData.append('image', image);
-    }
-    if (video) {
-        if (video.size > 50 * 1024 * 1024) { // 50MB limit
-            alert('Video file is too large. Maximum size is 50MB.');
-            setIsSubmitting(false);
-            return;
-        }
-        console.log('Appending video:', video.name);
-        formData.append('video', video);
-    }
-    if (audio) {
-        if (audio.size > 10 * 1024 * 1024) { // 10MB limit
-            alert('Audio file is too large. Maximum size is 10MB.');
-            setIsSubmitting(false);
-            return;
-        }
-        console.log('Appending audio:', audio.name);
-        formData.append('audio', audio);
     }
 
     // Format and append tags
@@ -523,30 +503,6 @@ const PostMystery = () => {
                 ))}
               </div>
             )}
-
-            {/* Additional Media Section */}
-            <div className="form-group mb-4">
-              <label className="form-label fw-bold">
-                <i className="fas fa-film me-2"></i>Additional Media
-              </label>
-              <input
-                type="file"
-                className="form-control mb-2"
-                onChange={(e) => setVideo(e.target.files[0])}
-                accept="video/*"
-                style={{ borderRadius: '10px' }}
-              />
-              <small className="text-muted d-block mb-3">Upload a video (optional)</small>
-
-              <input
-                type="file"
-                className="form-control"
-                onChange={(e) => setAudio(e.target.files[0])}
-                accept="audio/*"
-                style={{ borderRadius: '10px' }}
-              />
-              <small className="text-muted d-block">Upload an audio file (optional)</small>
-            </div>
 
             {/* Submit Button */}
             <button

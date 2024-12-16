@@ -1,5 +1,5 @@
 // src/components/Navbar.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
@@ -11,6 +11,8 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const [username, setUsername] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -51,14 +53,15 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    navigate(`/search?query=${searchTerm}`);
-    setSearchResults([]);
+    if (searchTerm.trim()) {
+      setShowDropdown(false);
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
-  const handleSelectResult = (id) => {
-    navigate(`/mystery/${id}`);
-    setSearchResults([]);
-    setSearchTerm('');
+  const handleSearchClick = (post) => {
+    setShowDropdown(false);
+    navigate(`/mystery/${post.id}`);
   };
 
   const handleLogout = () => {
@@ -78,35 +81,52 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
 
         <div className="d-flex align-items-center">
           <form className="form-inline me-3 position-relative" onSubmit={handleSearchSubmit}>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search mysteries..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              style={{ 
-                width: '250px',
-                borderRadius: '20px',
-                paddingLeft: '15px'
-              }}
-            />
-            {searchResults.length > 0 && (
-              <ul
-                className="list-group position-absolute bg-white shadow"
-                style={{ top: '100%', left: 0, right: 0, zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}
-              >
-                {searchResults.map(result => (
-                  <li
-                    key={result.id}
-                    className="list-group-item list-group-item-action"
-                    onClick={() => handleSelectResult(result.id)}
-                    style={{ cursor: 'pointer', color: 'var(--primary-text-gray)' }}
-                  >
-                    {result.title}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="position-relative">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search mysteries..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onFocus={() => setShowDropdown(true)}
+                style={{ 
+                  width: '250px',
+                  borderRadius: '20px',
+                  paddingLeft: '15px'
+                }}
+              />
+              {showDropdown && searchResults.length > 0 && (
+                <div 
+                  ref={dropdownRef}
+                  className="position-absolute w-100 mt-1 bg-white rounded shadow-sm"
+                  style={{ 
+                    zIndex: 1000,
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    border: '1px solid rgba(0,0,0,0.1)'
+                  }}
+                >
+                  {searchResults.map(result => (
+                    <div
+                      key={result.id}
+                      className="d-flex align-items-center p-2 border-bottom hover-bg-light"
+                      onClick={() => handleSearchClick(result)}
+                      style={{ 
+                        cursor: 'pointer', 
+                        color: 'var(--primary-text-gray)',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    >
+                      <div className="text-truncate">
+                        {result.title}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </form>
 
           <div className="d-flex align-items-center">
