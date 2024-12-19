@@ -56,6 +56,16 @@ const Profile = () => {
     anonymous_advocate: 'Making high-quality anonymous posts (10+ upvotes).',
   };
 
+  const isAdmin = () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      const adminUsers = ['usanli', 'suzan'];
+      return userData && adminUsers.includes(userData.username);
+    } catch (error) {
+      return false;
+    }
+  };
+
   if (!token) {
     return (
       <div className="container mt-5">
@@ -216,7 +226,7 @@ const Profile = () => {
     const badges = [];
     const upvotedPosts = posts.filter((post) => post.upvotes >= 10).length;
     const expertAnswers = comments.filter((comment) => comment.tag === 'Expert Answer').length;
-    const anonymousUpvotedPosts = posts.filter((post) => post.anonymous && post.upvotes >= 10).length;
+    const anonymousUpvotedPosts = posts.filter((post) => post.is_anonymous && post.upvotes >= 10).length;
 
     if (posts.length > 0) badges.push('first_post');
     if (comments.length >= 10) badges.push('commenter');
@@ -726,6 +736,22 @@ const Profile = () => {
             </div>
           </Modal>
         </>
+      )}
+
+      {isAdmin() && (
+        <div className="mt-4 pt-4 border-top">
+          <h5 className="mb-3">Admin Actions</h5>
+          <Link 
+            to="/test-runner" 
+            className="btn btn-primary"
+            style={{ 
+              borderRadius: '4px',
+              padding: '6px 12px'
+            }}
+          >
+            Test Runner
+          </Link>
+        </div>
       )}
     </div>
   );

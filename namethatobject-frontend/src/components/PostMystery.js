@@ -22,6 +22,7 @@ const PostMystery = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   const mysteryAttributes = {
     Color: ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Brown', 'Purple', 'Orange', 'Pink', 'Gray', 'Multicolored'],
@@ -90,6 +91,9 @@ const PostMystery = () => {
 
   // Function to identify the image using Hugging Face BLIP API
   const identifyImage = async (file) => {
+    setIsGeneratingDescription(true);
+    setDescription("Generating description...");
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onloadend = async () => {
@@ -120,6 +124,8 @@ const PostMystery = () => {
       } catch (error) {
         console.error("Error generating description:", error);
         setDescription("Error generating a description for the image.");
+      } finally {
+        setIsGeneratingDescription(false);
       }
     };
   };
@@ -305,6 +311,12 @@ const PostMystery = () => {
             <div className="form-group mb-4">
               <label className="form-label fw-bold">
                 <i className="fas fa-align-left me-2"></i>Description
+                {isGeneratingDescription && (
+                  <small className="text-muted ms-2">
+                    <i className="fas fa-spinner fa-spin me-1"></i>
+                    Generating description...
+                  </small>
+                )}
               </label>
               <textarea
                 className="form-control"
@@ -313,6 +325,7 @@ const PostMystery = () => {
                 rows="4"
                 placeholder="Describe your mystery in detail..."
                 style={{ borderRadius: '10px' }}
+                disabled={isGeneratingDescription}
               />
             </div>
 

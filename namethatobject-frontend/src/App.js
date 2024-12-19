@@ -13,8 +13,10 @@ import PostMystery from './components/PostMystery';
 import LogoutSuccess from './components/LogoutSuccess';
 import NotFound from './components/NotFound';
 import ErrorPage from './components/ErrorPage';
+import TestRunner from './components/TestRunner';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import AdminRoute from './components/AdminRoute';
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +29,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<MysteryList searchTerm={searchTerm} />} />
             <Route path="/mystery/:id" element={<MysteryDetail />} />
-            <Route path="/search" element={<SearchResults />} />
+            <Route path="/search" element={<SearchResults searchTerm={searchTerm} setSearchTerm={setSearchTerm} />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signin" element={<Signin />} />
             <Route path="/profile" element={<Profile />} />
@@ -35,6 +37,14 @@ const App = () => {
             <Route path="/post-mystery" element={<PostMystery />} />
             <Route path="/logout-success" element={<LogoutSuccess />} />
             <Route path="/error" element={<ErrorPage />} />
+            <Route 
+              path="/test-runner" 
+              element={
+                <AdminRoute>
+                  <TestRunner />
+                </AdminRoute>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

@@ -18,7 +18,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --watchAll=false",
+    "test:watch": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -41,5 +42,10 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+  },
+  "jest": {
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ]
   }
 }

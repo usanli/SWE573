@@ -130,21 +130,18 @@ const Navbar = ({ searchTerm, setSearchTerm }) => {
           </form>
 
           <div className="d-flex align-items-center">
-            {isLoggedIn && (
-              <Link
-                className="btn btn-primary me-3"
-                to="/post-mystery"
-                style={{ 
-                  borderRadius: '20px',
-                  padding: '8px 20px'
-                }}
-              >
-                Post a Mystery
-              </Link>
-            )}
-
             {isLoggedIn ? (
               <>
+                <Link
+                  to="/post-mystery"
+                  className="btn btn-primary me-3"
+                  style={{ 
+                    borderRadius: '20px',
+                    padding: '8px 20px'
+                  }}
+                >
+                  Post a Mystery
+                </Link>
                 <Link 
                   className="nav-link me-3" 
                   to={`/profile/${username}`}

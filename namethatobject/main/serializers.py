@@ -97,23 +97,25 @@ class PostSerializer(serializers.ModelSerializer):
                  'image_url', 'created_at', 'tags',
                  'author', 'upvotes', 'downvotes', 'eureka_comment',
                  'is_anonymous', 'parts_relation']
+        read_only_fields = ['author', 'created_at', 'upvotes', 'downvotes', 
+                           'eureka_comment', 'image_url']
 
     def create(self, validated_data):
         validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        print("Update method called with data:", validated_data)
-        if 'image' in validated_data:
-            instance.image = validated_data.get('image')
-            instance.image_url = None
-            print(f"New image assigned: {instance.image}")
+        print("PostSerializer update method - validated data:", validated_data)
         
-        instance.title = validated_data.get('title', instance.title)
-        instance.description = validated_data.get('description', instance.description)
-        instance.tags = validated_data.get('tags', instance.tags)
+        # Update basic fields
+        if 'title' in validated_data:
+            instance.title = validated_data['title']
+        if 'description' in validated_data:
+            instance.description = validated_data['description']
+        
+        # Save and return the instance
         instance.save()
-        print(f"After save - Image URL: {instance.image_url}")
+        print("Instance after save:", instance.__dict__)
         return instance
 
     def get_image_url(self, obj):

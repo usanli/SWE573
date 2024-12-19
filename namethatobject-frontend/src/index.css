@@ -54,3 +54,19 @@ a:hover {
   background-color: var(--accent-green);
   color: #ffffff;
 }
+
+.test-output {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.test-output .text-success {
+  color: #28a745;
+}
+
+.test-output .text-danger {
+  color: #dc3545;
+}

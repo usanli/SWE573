@@ -27,6 +27,7 @@ const Signin = () => {
             
             navigate('/');
         } catch (error) {
+            console.error('Login error:', error);
             setMessage('Login failed. Please check your credentials and try again.');
         }
     };

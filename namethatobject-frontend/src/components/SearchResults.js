@@ -8,7 +8,9 @@ const SearchResults = () => {
   const location = useLocation();
   const [results, setResults] = useState([]);
   const [visibleCount, setVisibleCount] = useState(10);
-  const [searchQuery, setSearchQuery] = useState(new URLSearchParams(location.search).get('query') || '');
+  const [searchQuery, setSearchQuery] = useState(
+    new URLSearchParams(location.search).get('q') || ''
+  );
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -40,6 +42,13 @@ const SearchResults = () => {
   useEffect(() => {
     fetchSearchResults();
   }, [searchQuery, filters]);
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search).get('q');
+    if (query) {
+      setSearchQuery(query);
+    }
+  }, [location.search]);
 
   const fetchSearchResults = () => {
     axios.get(MYSTERIES_ENDPOINT).then((response) => {
@@ -196,36 +205,30 @@ const SearchResults = () => {
                   <div className="col">
                     {/* Author info row */}
                     <div className="d-flex align-items-center mb-2">
-                      {mystery.is_anonymous ? (
-                        <div className="d-flex align-items-center">
-                          <img
-                            src={`https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`}
-                            alt="Anonymous"
-                            className="rounded-circle me-2"
-                            style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                          />
+                      <div className="d-flex align-items-center">
+                        <img
+                          src={
+                            mystery.is_anonymous
+                              ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
+                              : mystery.author?.profile?.profile_picture
+                                ? getCloudinaryUrl(mystery.author.profile.profile_picture)
+                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(mystery.author?.username || 'Anonymous')}&background=random&size=32`
+                          }
+                          alt={mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}
+                          className="rounded-circle me-2"
+                          style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mystery.author?.username || 'Anonymous')}&background=random&size=32`;
+                          }}
+                        />
+                        {mystery.is_anonymous ? (
                           <span className="text-muted">Anonymous</span>
-                        </div>
-                      ) : (
-                        <div className="d-flex align-items-center">
-                          <img
-                            src={
-                              mystery.is_anonymous
-                                ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
-                                : getCloudinaryUrl(mystery.author?.profile_picture) || `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
-                            }
-                            alt={mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}
-                            className="rounded-circle me-2"
-                            style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.target.src = `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`;
-                            }}
-                          />
+                        ) : (
                           <Link to={`/profile/${mystery.author?.username}`} className="text-decoration-none">
                             <span>{mystery.author?.username}</span>
                           </Link>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       <span className="text-muted ms-2">
                         • {new Date(mystery.created_at).toLocaleString()}
                       </span>

@@ -1,15 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from rest_framework import viewsets, generics, status
+from rest_framework import viewsets, generics, status, filters
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from .models import Post, Comment, UserProfile
 from .forms import CommentForm
 from .serializers import PostSerializer, CommentSerializer, UserSerializer, UserProfileSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from rest_framework.authtoken.views import ObtainAuthToken
+import subprocess
+from django.db.models import Q
+import os
 
 def post_list(request):
     posts = Post.objects.all()
@@ -39,44 +43,101 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title', 'description', 'tags']
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+
+    def get_queryset(self):
+        queryset = Post.objects.filter(is_deleted=False)
+        search_query = self.request.query_params.get('search', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(tags__icontains=search_query)
+            )
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def partial_update(self, request, *args, **kwargs):
+    def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        
         # Check if user is the author
         if instance.author != request.user:
             return Response(
-                {"error": "Only the author can update this post"},
-                status=status.HTTP_403_FORBIDDEN
+                {'error': 'You do not have permission to edit this post'},
+                status=403
             )
+
+        # Print debug information
+        print("Request data:", request.data)
+        print("Request content type:", request.content_type)
         
-        # Handle the eureka_comment update
-        if 'eureka_comment' in request.data:
-            instance.eureka_comment = request.data['eureka_comment']
+        # Handle both PATCH and PUT requests
+        partial = kwargs.pop('partial', False)
         
-        # Handle tags update
-        if 'tags' in request.data:
-            instance.tags = request.data['tags']
+        # Extract only allowed fields
+        allowed_fields = ['title', 'description']
+        update_data = {}
         
-        instance.save()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        # Handle both regular data and JSON string
+        data = request.data
+        if isinstance(data, str):
+            import json
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError:
+                return Response({'error': 'Invalid JSON data'}, status=400)
+        
+        for field in allowed_fields:
+            if field in data:
+                update_data[field] = data[field]
+        
+        print("Update data:", update_data)
+
+        # Perform update
+        serializer = self.get_serializer(
+            instance, 
+            data=update_data, 
+            partial=partial
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            print("Updated instance:", serializer.data)
+            return Response(serializer.data)
+        except Exception as e:
+            print("Update error:", str(e))
+            return Response({'error': str(e)}, status=400)
+
+    def perform_update(self, serializer):
+        print("Performing update with data:", serializer.validated_data)
+        serializer.save()
+        print("Update saved successfully")
+
+    # Remove partial_update method to avoid conflicts
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def upvote(self, request, pk=None):
         post = self.get_object()
         post.upvotes += 1
         post.save()
-        return Response({'points': post.points, 'upvotes': post.upvotes, 'downvotes': post.downvotes}, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
     def downvote(self, request, pk=None):
         post = self.get_object()
         post.downvotes += 1
         post.save()
-        return Response({'points': post.points, 'upvotes': post.upvotes, 'downvotes': post.downvotes}, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         post = self.get_object()
@@ -167,9 +228,8 @@ class SignUpView(APIView):
         user = serializer.save()
         token, created = Token.objects.get_or_create(user=user)
         return Response({
-            "user_id": user.id,
-            "username": user.username,
-            "token": token.key
+            "token": token.key,
+            "username": user.username
         }, status=status.HTTP_201_CREATED)
 
 class UserProfileView(APIView):
@@ -235,3 +295,68 @@ def delete_account(request):
     except Exception as e:
         return Response({"error": str(e)}, 
                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CustomAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data,
+                                         context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.pk,
+                'username': user.username,
+                'is_admin': user.is_staff,
+                'email': user.email
+            }
+        })
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def run_tests(request):
+    try:
+        suite = request.data.get('suite', 'all')
+        test_type = request.data.get('type', 'frontend')  # Add test type parameter
+        
+        if test_type == 'backend':
+            # Run Django backend tests
+            command = ['python', 'manage.py', 'test']
+            if suite != 'all':
+                command.append(suite)
+                
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            )
+        else:
+            # Run frontend tests
+            command = ['npm', 'test']
+            if suite != 'all':
+                command.extend(['--', f'tests/{suite}'])
+                
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                cwd='/app',  # Use absolute path in production
+                env={
+                    **os.environ,
+                    'CI': 'true',
+                    'NODE_ENV': 'test'
+                }
+            )
+        
+        return Response({
+            'success': result.returncode == 0,
+            'output': result.stdout,
+            'errors': result.stderr
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': f'Error running tests: {str(e)}. Current directory: {os.getcwd()}'
+        }, status=500)

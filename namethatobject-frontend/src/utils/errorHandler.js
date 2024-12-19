@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 export const handleAxiosError = (error, navigate) => {
   if (error.response) {
@@ -44,4 +46,17 @@ export const handleAxiosError = (error, navigate) => {
       state: { error: 'An unexpected error occurred.' } 
     });
   }
+}; 
+
+export const logTestRun = async (suite, results) => {
+    try {
+        await axios.post(`${API_BASE_URL}/log-test-run/`, {
+            suite,
+            results,
+            timestamp: new Date().toISOString(),
+            user: localStorage.getItem('username')
+        });
+    } catch (error) {
+        console.error('Failed to log test run:', error);
+    }
 }; 

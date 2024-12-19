@@ -22,6 +22,9 @@ const MysteryDetail = () => {
   const [showEurekaSelection, setShowEurekaSelection] = useState(false);
   const [selectedEurekaComment, setSelectedEurekaComment] = useState(null);
   const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,6 +72,13 @@ const MysteryDetail = () => {
 
     fetchData();
   }, [id, navigate]);
+
+  useEffect(() => {
+    if (mystery) {
+      setEditedTitle(mystery.title);
+      setEditedDescription(mystery.description);
+    }
+  }, [mystery]);
 
   const handleVote = async (voteType) => {
     if (!isLoggedIn || !token) return;
@@ -329,6 +339,48 @@ const MysteryDetail = () => {
     }
   };
 
+  const handleEdit = async () => {
+    try {
+      console.log('Sending edit request:', {
+        title: editedTitle,
+        description: editedDescription
+      });
+
+      const response = await axios.patch(
+        `${API_BASE_URL}/posts/${id}/`,
+        JSON.stringify({  // Stringify the data
+          title: editedTitle,
+          description: editedDescription
+        }),
+        {
+          headers: { 
+            Authorization: `Token ${token}`,
+            'Content-Type': 'application/json'  // Specify content type as JSON
+          }
+        }
+      );
+
+      console.log('Edit response:', response.data);
+
+      if (response.data) {
+        setMystery(response.data);
+        setEditedTitle(response.data.title);
+        setEditedDescription(response.data.description);
+        setIsEditing(false);
+        alert('Post updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error updating post:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.data?.error) {
+        alert(error.response.data.error);
+      } else {
+        alert('Failed to update post. Please try again.');
+      }
+    }
+  };
+
   if (!mystery) {
     return <p>Loading...</p>;
   }
@@ -359,66 +411,117 @@ const MysteryDetail = () => {
               </div>
             </div>
             <div className="col">
-              <h1 className="mb-3">{mystery.title}</h1>
-              <div className="d-flex align-items-center">
-                {mystery.is_anonymous ? (
-                  <div className="d-flex align-items-center me-2">
-                    <img
-                      src={`https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`}
-                      alt="Anonymous"
-                      className="rounded-circle"
-                      style={{ width: '32px', height: '32px' }}
+              {isEditing ? (
+                <div className="edit-form">
+                  <div className="form-group mb-3">
+                    <label>Title</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
                     />
-                    <span className="ms-2 text-muted">Anonymous</span>
                   </div>
-                ) : (
-                  <Link 
-                    to={`/profile/${mystery.author?.username}`}
-                    className="text-decoration-none me-2"
-                  >
+                  <div className="form-group mb-3">
+                    <label>Description</label>
+                    <textarea
+                      className="form-control"
+                      rows="4"
+                      value={editedDescription}
+                      onChange={(e) => setEditedDescription(e.target.value)}
+                    />
+                  </div>
+                  <div className="btn-group">
+                    <button 
+                      className="btn btn-primary"
+                      onClick={handleEdit}
+                    >
+                      Save Changes
+                    </button>
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditedTitle(mystery.title);
+                        setEditedDescription(mystery.description);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="mb-3">{mystery.title}</h1>
+                  
+                  {/* Author info and post date */}
+                  <div className="d-flex align-items-center mb-3">
                     <img
                       src={
                         mystery.is_anonymous
                           ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
-                          : getCloudinaryUrl(mystery.author?.profile_picture) || `https://ui-avatars.com/api/?name=${mystery.author?.username}&background=random&size=32`
+                          : mystery.author?.profile?.profile_picture
+                            ? getCloudinaryUrl(mystery.author.profile.profile_picture)
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(mystery.author?.username || 'Anonymous')}&background=random&size=32`
                       }
                       alt={mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}
-                      className="rounded-circle"
+                      className="rounded-circle me-2"
                       style={{ width: '32px', height: '32px', objectFit: 'cover' }}
                       onError={(e) => {
-                        e.target.src = `https://ui-avatars.com/api/?name=${mystery.is_anonymous ? 'Anonymous' : mystery.author?.username}&background=random&size=32`;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mystery.author?.username || 'Anonymous')}&background=random&size=32`;
                       }}
                     />
-                    <span className="ms-2 text-primary">{mystery.author?.username}</span>
-                  </Link>
-                )}
-                <span className="text-muted">
-                  • {new Date(mystery.created_at).toLocaleString()}
-                </span>
-                {isLoggedIn && mystery.author?.username === username && (
-                  <div className="ms-auto btn-group">
-                    {!isSolved && (
-                      <button
-                        className="btn btn-success btn-sm"
-                        onClick={handleMarkSolved}
-                      >
-                        <i className="fas fa-check-circle me-1"></i>
-                        Mark as Solved
-                      </button>
+                    {mystery.is_anonymous ? (
+                      <span className="text-muted">Anonymous</span>
+                    ) : (
+                      <Link to={`/profile/${mystery.author?.username}`} className="text-decoration-none">
+                        <span>{mystery.author?.username}</span>
+                      </Link>
                     )}
-                    {comments.length === 0 && (
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={handleDeletePost}
-                        title={comments.length > 0 ? "Posts with comments cannot be deleted" : "Delete this post"}
-                      >
-                        <i className="fas fa-trash me-1"></i>
-                        Delete Post
-                      </button>
+                    <span className="text-muted ms-2">
+                      • {new Date(mystery.created_at).toLocaleString()}
+                    </span>
+
+                    {/* Action buttons for post owner */}
+                    {isLoggedIn && mystery.author?.username === username && (
+                      <div className="ms-auto btn-group">
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setIsEditing(!isEditing)}
+                        >
+                          <i className="fas fa-edit me-1"></i>
+                          Edit
+                        </button>
+                        {!isSolved && (
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={handleMarkSolved}
+                          >
+                            <i className="fas fa-check-circle me-1"></i>
+                            Mark as Solved
+                          </button>
+                        )}
+                        {comments.length === 0 && (
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={handleDeletePost}
+                            title={comments.length > 0 ? "Posts with comments cannot be deleted" : "Delete this post"}
+                          >
+                            <i className="fas fa-trash me-1"></i>
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+
+                  {/* Description */}
+                  <div className="description-section mt-4">
+                    <h5 className="mb-3">Description</h5>
+                    <p className="lead">{mystery.description}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -441,14 +544,26 @@ const MysteryDetail = () => {
 
           {/* Media section - only for image */}
           {mystery.image_url && (
-            <div className="media-container position-relative mb-4">
+            <div 
+              className="media-container position-relative mb-4"
+              onClick={() => openModal(mystery.image_url)}
+              style={{ cursor: 'pointer' }}
+            >
               <img
                 src={mystery.image_url}
                 alt={mystery.title}
                 className="img-fluid w-100"
-                style={{ cursor: 'pointer' }}
-                onClick={() => openModal(mystery.image_url)}
+                style={{ 
+                  maxHeight: '400px',
+                  objectFit: 'contain',
+                  width: 'auto',
+                  margin: '0 auto',
+                  display: 'block'
+                }}
               />
+              <div className="overlay-hover d-flex align-items-center justify-content-center">
+                <i className="fas fa-search-plus text-white" style={{ fontSize: '2rem' }}></i>
+              </div>
             </div>
           )}
 
@@ -497,11 +612,6 @@ const MysteryDetail = () => {
           </Modal>
 
           {renderTags()}
-
-          <div className="description-section mt-4">
-            <h5 className="mb-3">Description</h5>
-            <p className="lead">{mystery.description}</p>
-          </div>
 
           {mystery.parts_relation && (
             <div className="parts-relation-section mt-4">
@@ -575,34 +685,25 @@ const MysteryDetail = () => {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start">
                     <div className="d-flex align-items-center mb-2">
-                      {comment.is_anonymous ? (
-                        <div className="d-flex align-items-center">
-                          <img
-                            src={`https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`}
-                            alt="Anonymous"
-                            className="rounded-circle me-2"
-                            style={{ width: '32px', height: '32px' }}
-                          />
-                          <span className="text-muted">Anonymous</span>
-                        </div>
-                      ) : (
-                        <div className="d-flex align-items-center">
-                          <img
-                            src={
-                              comment.is_anonymous
-                                ? `https://ui-avatars.com/api/?name=Anonymous&background=random&size=32`
-                                : getCloudinaryUrl(comment.author?.profile_picture) || `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
-                            }
-                            alt={comment.is_anonymous ? 'Anonymous' : comment.author?.username}
-                            className="rounded-circle me-2"
-                            style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.target.src = `https://ui-avatars.com/api/?name=${comment.is_anonymous ? 'Anonymous' : comment.author?.username}&background=random&size=32`;
-                            }}
-                          />
-                          <span>{comment.is_anonymous ? 'Anonymous' : comment.author?.username}</span>
-                        </div>
-                      )}
+                      <img
+                        src={
+                          comment.author?.profile?.profile_picture
+                            ? getCloudinaryUrl(comment.author.profile.profile_picture)
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author?.username || 'Anonymous')}&background=random&size=32`
+                        }
+                        alt={comment.author?.username}
+                        className="rounded-circle me-2"
+                        style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author?.username || 'Anonymous')}&background=random&size=32`;
+                        }}
+                      />
+                      <Link to={`/profile/${comment.author?.username}`} className="text-decoration-none">
+                        <span>{comment.author?.username}</span>
+                      </Link>
+                      <span className="text-muted ms-2">
+                        • {new Date(comment.created_at).toLocaleString()}
+                      </span>
                     </div>
                     <small className="text-muted">
                       {new Date(comment.created_at).toLocaleString()}
@@ -688,15 +789,15 @@ const MysteryDetail = () => {
                       <div className="d-flex align-items-center">
                         <img
                           src={
-                            comment.author?.profile_picture
-                              ? getCloudinaryUrl(comment.author?.profile_picture) || `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
-                              : `https://ui-avatars.com/api/?name=${comment.author?.username}&background=random&size=32`
+                            comment.author?.profile?.profile_picture
+                              ? getCloudinaryUrl(comment.author.profile.profile_picture)
+                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author?.username || 'Anonymous')}&background=random&size=32`
                           }
-                          alt={comment.is_anonymous ? 'Anonymous' : comment.author?.username}
+                          alt={comment.author?.username}
                           className="rounded-circle me-2"
                           style={{ width: '32px', height: '32px', objectFit: 'cover' }}
                           onError={(e) => {
-                            e.target.src = `https://ui-avatars.com/api/?name=${comment.is_anonymous ? 'Anonymous' : comment.author?.username}&background=random&size=32`;
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author?.username || 'Anonymous')}&background=random&size=32`;
                           }}
                         />
                         <h6 className="mb-1">{comment.author?.username}</h6>
@@ -781,15 +882,15 @@ const MysteryDetail = () => {
                               <div className="d-flex align-items-center">
                                 <img
                                   src={
-                                    reply.author?.profile_picture
-                                      ? getCloudinaryUrl(reply.author?.profile_picture) || `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=32`
-                                      : `https://ui-avatars.com/api/?name=${reply.author?.username}&background=random&size=32`
+                                    reply.author?.profile?.profile_picture
+                                      ? getCloudinaryUrl(reply.author.profile.profile_picture)
+                                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.author?.username || 'Anonymous')}&background=random&size=32`
                                   }
-                                  alt={reply.is_anonymous ? 'Anonymous' : reply.author?.username}
+                                  alt={reply.author?.username}
                                   className="rounded-circle me-2"
                                   style={{ width: '32px', height: '32px', objectFit: 'cover' }}
                                   onError={(e) => {
-                                    e.target.src = `https://ui-avatars.com/api/?name=${reply.is_anonymous ? 'Anonymous' : reply.author?.username}&background=random&size=32`;
+                                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.author?.username || 'Anonymous')}&background=random&size=32`;
                                   }}
                                 />
                                 <strong>{reply.author?.username}</strong>
@@ -923,6 +1024,8 @@ const MysteryDetail = () => {
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background-color: #f8f9fa;
+            text-align: center;
           }
 
           .overlay-hover {
@@ -934,6 +1037,7 @@ const MysteryDetail = () => {
             background: rgba(0,0,0,0.5);
             opacity: 0;
             transition: opacity 0.3s;
+            cursor: pointer;
           }
 
           .media-container:hover .overlay-hover {
